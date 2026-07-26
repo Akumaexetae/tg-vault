@@ -24,7 +24,10 @@ export function filterEntries(
 }
 
 /** "Bella's OnlyFans" — used for activity log labels. */
-export function entryLabel(entry: Entry, creators: Creator[]): string {
+export function entryLabel(
+  entry: Pick<Entry, 'service_name' | 'creator_id' | 'username'>,
+  creators: Creator[],
+): string {
   const creator = creators.find((c) => c.id === entry.creator_id);
   const owner = creator ? `${creator.name}'s` : '';
   return `${owner} ${entry.service_name}`.trim() + ` (${entry.username})`;
