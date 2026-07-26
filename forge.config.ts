@@ -27,6 +27,9 @@ const config: ForgeConfig = {
       config: {
         repository: { owner: 'Akumaexetae', name: 'tg-vault' },
         prerelease: false,
+        // Publish immediately — the updater only sees published releases, and a
+        // forgotten draft silently means "no update available" for everyone.
+        draft: false,
       },
     },
   ],
