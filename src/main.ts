@@ -33,6 +33,69 @@ ipcMain.handle('open-external', (_event, url: string) => {
   if (/^https?:\/\//i.test(url)) shell.openExternal(url);
 });
 
+// --- One-click login -------------------------------------------------------
+// Opens the service in a dedicated window whose session is isolated PER
+// ACCOUNT (persist:acct-<id>), so multiple accounts on the same service stay
+// logged in side by side. Fills the login form when one is present; never
+// auto-submits.
+const autofillScript = (username: string, password: string) => `
+(() => {
+  const USERNAME = ${JSON.stringify(username)};
+  const PASSWORD = ${JSON.stringify(password)};
+  const setVal = (el, v) => {
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    set.call(el, v);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  const tryFill = () => {
+    const pw = [...document.querySelectorAll('input[type=password]')].find(i => i.offsetParent);
+    if (!pw) return false;
+    const inputs = [...document.querySelectorAll('input')].filter(
+      i => ['text', 'email', 'tel', 'username'].includes(i.type) && i.offsetParent
+    );
+    const user = inputs.filter(i => i.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING).pop() || inputs[0];
+    if (user) setVal(user, USERNAME);
+    setVal(pw, PASSWORD);
+    pw.focus();
+    return true;
+  };
+  // SPA login forms often render late — retry for ~6s.
+  let attempts = 0;
+  const timer = setInterval(() => {
+    if (tryFill() || ++attempts > 12) clearInterval(timer);
+  }, 500);
+  tryFill();
+})();
+`;
+
+ipcMain.handle(
+  'login:open',
+  (
+    _event,
+    opts: { id: string; url: string; username: string; password: string },
+  ) => {
+    if (!/^https?:\/\//i.test(opts.url)) return;
+    const win = new BrowserWindow({
+      width: 1150,
+      height: 820,
+      title: `T&G Vault — ${opts.username}`,
+      autoHideMenuBar: true,
+      webPreferences: {
+        partition: `persist:acct-${opts.id}`,
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+    win.webContents.on('did-finish-load', () => {
+      win.webContents
+        .executeJavaScript(autofillScript(opts.username, opts.password))
+        .catch(() => {});
+    });
+    win.loadURL(opts.url);
+  },
+);
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
     width: 1280,

@@ -123,8 +123,27 @@ export function EntryRow({
         <div className="entry-actions">
           {entry.service_url && (
             <button
+              className="btn btn-login"
+              title="Open this account in its own logged-in window"
+              onClick={() =>
+                window.vaultBridge?.openLogin({
+                  id: entry.id,
+                  url: entry.service_url,
+                  username: entry.username,
+                  password: entry.password,
+                })
+              }
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                <path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z" />
+              </svg>
+              Log in
+            </button>
+          )}
+          {entry.service_url && (
+            <button
               className="icon-btn"
-              title="Open site"
+              title="Open site in your browser"
               onClick={() => window.vaultBridge?.openExternal(entry.service_url)}
             >
               <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
