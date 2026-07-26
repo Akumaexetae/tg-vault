@@ -183,6 +183,22 @@ export async function deleteCreator(
   await logActivity(who, 'deleted', `creator ${name}`);
 }
 
+/**
+ * Supabase reports a missing bucket as a bare "Bucket not found", which tells
+ * nobody what to do. Name the bucket and the fix instead.
+ */
+function storageError(error: { message: string }, bucket: string): Error {
+  if (/bucket not found/i.test(error.message)) {
+    return new Error(
+      `The "${bucket}" storage bucket doesn't exist yet. In Supabase go to ` +
+        `Storage → New bucket, name it "${bucket}"` +
+        (bucket === 'avatars' ? ', make it public' : '') +
+        ', then try again.',
+    );
+  }
+  return new Error(error.message);
+}
+
 /** Uploads a resized avatar, overwriting any previous one for this creator. */
 export async function uploadAvatar(
   creatorId: string,
@@ -192,7 +208,7 @@ export async function uploadAvatar(
   const { error } = await getClient()
     .storage.from('avatars')
     .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-  if (error) throw error;
+  if (error) throw storageError(error, 'avatars');
   return path;
 }
 
@@ -211,7 +227,7 @@ export async function uploadDocumentFile(
 ): Promise<string> {
   const path = `${creatorId}/${Date.now()}-${file.name}`;
   const { error } = await getClient().storage.from('documents').upload(path, file);
-  if (error) throw error;
+  if (error) throw storageError(error, 'documents');
   return path;
 }
 
