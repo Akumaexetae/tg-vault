@@ -107,6 +107,7 @@ function VaultApp({
   const [pendingNoteDelete, setPendingNoteDelete] = useState<SecureNote | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
+  const [version, setVersion] = useState('');
   const [filterService, setFilterService] = useState('');
   const [filterCreator, setFilterCreator] = useState('');
 
@@ -130,6 +131,7 @@ function VaultApp({
   useEffect(() => {
     window.vaultBridge?.updateStatus().then(setUpdateReady).catch(() => {});
     window.vaultBridge?.onUpdateReady(() => setUpdateReady(true));
+    window.vaultBridge?.appVersion().then(setVersion).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -438,6 +440,7 @@ function VaultApp({
           <div className="sidebar-user">
             <span className={`activity-avatar avatar-${user.toLowerCase()}`}>{user[0]}</span>
             {user}
+            {version && <span className="version-tag">v{version}</span>}
             <button
               className="icon-btn sidebar-disconnect"
               title="Disconnect this PC from the vault"

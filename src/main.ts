@@ -53,6 +53,7 @@ function initAutoUpdate(): void {
 app.on('ready', initAutoUpdate);
 
 // Renderer asks on load, in case the update landed before the window existed.
+ipcMain.handle('app:version', () => app.getVersion());
 ipcMain.handle('update:status', () => updateReady);
 ipcMain.handle('update:restart', () => {
   if (updateReady) autoUpdater.quitAndInstall();

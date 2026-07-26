@@ -19,6 +19,7 @@ declare global {
         filename: string;
         contents: string;
       }) => Promise<string | null>;
+      appVersion: () => Promise<string>;
       updateStatus: () => Promise<boolean>;
       restartForUpdate: () => Promise<void>;
       onUpdateReady: (callback: () => void) => void;

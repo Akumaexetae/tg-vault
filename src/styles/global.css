@@ -142,8 +142,17 @@ h2 {
 }
 
 .sidebar-disconnect {
-  margin-left: auto;
   font-size: 14px;
+}
+
+.version-tag {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--accent-soft);
+  border-radius: 99px;
+  padding: 2px 7px;
 }
 
 .connect-error {
