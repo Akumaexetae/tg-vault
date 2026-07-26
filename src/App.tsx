@@ -3,6 +3,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { ConnectScreen } from './components/ConnectScreen';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { CreatorAvatar } from './components/CreatorAvatar';
+import { NavGroup } from './components/NavGroup';
 import { EntryModal } from './components/EntryModal';
 import { IdentityScreen } from './components/IdentityScreen';
 import { ServiceIcon } from './components/ServiceIcon';
@@ -141,6 +142,27 @@ function VaultApp({
   const [earningsFor, setEarningsFor] = useState<Creator | null>(null);
   const [pendingCreatorDelete, setPendingCreatorDelete] = useState<Creator | null>(null);
   const [pendingDocDelete, setPendingDocDelete] = useState<CreatorDocument | null>(null);
+  // Sidebar groups remember their open/closed state per install.
+  const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean }>(
+    () => {
+      try {
+        return {
+          creators: true,
+          vault: true,
+          ...JSON.parse(localStorage.getItem('tg-vault-nav-groups') ?? '{}'),
+        };
+      } catch {
+        return { creators: true, vault: true };
+      }
+    },
+  );
+
+  const toggleGroup = (key: 'creators' | 'vault') =>
+    setOpenGroups((g) => {
+      const next = { ...g, [key]: !g[key] };
+      localStorage.setItem('tg-vault-nav-groups', JSON.stringify(next));
+      return next;
+    });
   const [version, setVersion] = useState('');
   const [filterService, setFilterService] = useState('');
   const [filterCreator, setFilterCreator] = useState('');
@@ -597,67 +619,113 @@ function VaultApp({
 
         <nav className="sidebar-nav">
           {navItem('Home', { view: 'dashboard' }, on('dashboard'))}
-          {navItem('Creators', { view: 'creators' }, on('creators'))}
-          {navItem('Vault', { view: 'all' }, on('all'))}
-          {navItem('Secure notes', { view: 'notes' }, on('notes'))}
-          {navItem('Activity', { view: 'activity' }, on('activity'))}
 
-          <div className="nav-section">Services</div>
-          {navItem('Password health', { view: 'health' }, on('health'))}
-          {groups.map((g) =>
-            navItem(
-              `${g.name} (${g.count})`,
-              { view: 'service', id: g.id },
-              !searching && route.view === 'service' && route.id === g.id,
-              <ServiceIcon serviceKey={g.key} serviceUrl={g.url} size={20} />,
-            ),
-          )}
+          <NavGroup
+            label="Creators"
+            count={creators.length}
+            active={on('creators')}
+            expanded={openGroups.creators}
+            onNavigate={() => {
+              setQuery('');
+              setRoute({ view: 'creators' });
+              if (!openGroups.creators) toggleGroup('creators');
+            }}
+            onToggle={() => toggleGroup('creators')}
+            action={
+              <button
+                className="nav-group-add"
+                title="Add creator"
+                disabled={readOnly}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCreatorModal('new');
+                }}
+              >
+                +
+              </button>
+            }
+          >
+            {sortedCreators.map((c) => (
+              <button
+                key={c.id}
+                className={`nav-item nav-child ${
+                  !searching && route.view === 'creator' && route.id === c.id
+                    ? 'nav-item-active'
+                    : ''
+                } ${c.status === 'ended' || c.status === 'paused' ? 'nav-item-dim' : ''}`}
+                onClick={() => {
+                  setQuery('');
+                  setCreatorTab('overview');
+                  setRoute({ view: 'creator', id: c.id });
+                }}
+              >
+                <CreatorAvatar creator={c} size={20} />
+                <span className="nav-label">
+                  {c.name} ({entries.filter((e) => e.creator_id === c.id).length})
+                </span>
+                {c.status !== 'active' && c.kind === 'creator' && (
+                  <span
+                    className="status-dot"
+                    title={c.status}
+                    style={{
+                      background:
+                        c.status === 'ended'
+                          ? '#8aa1ae'
+                          : c.status === 'paused'
+                            ? '#fab219'
+                            : '#7fcdf3',
+                    }}
+                  />
+                )}
+              </button>
+            ))}
+          </NavGroup>
 
-          <div className="nav-section">
-            Creators
+          <NavGroup
+            label="Vault"
+            count={entries.length}
+            active={on('all')}
+            expanded={openGroups.vault}
+            onNavigate={() => {
+              setQuery('');
+              setRoute({ view: 'all' });
+              if (!openGroups.vault) toggleGroup('vault');
+            }}
+            onToggle={() => toggleGroup('vault')}
+          >
             <button
-              className="icon-btn nav-section-add"
-              title="Add creator"
-              disabled={readOnly}
-              onClick={() => setCreatorModal('new')}
-            >
-              +
-            </button>
-          </div>
-          {sortedCreators.map((c) => (
-            <button
-              key={c.id}
-              className={`nav-item ${
-                !searching && route.view === 'creator' && route.id === c.id
-                  ? 'nav-item-active'
-                  : ''
-              } ${c.status === 'ended' || c.status === 'paused' ? 'nav-item-dim' : ''}`}
+              className={`nav-item nav-child ${on('health') ? 'nav-item-active' : ''}`}
               onClick={() => {
                 setQuery('');
-                setCreatorTab('overview');
-                setRoute({ view: 'creator', id: c.id });
+                setRoute({ view: 'health' });
               }}
             >
-              <CreatorAvatar creator={c} size={20} />
-              <span className="nav-label">
-                {c.name} ({entries.filter((e) => e.creator_id === c.id).length})
-              </span>
-              {c.status !== 'active' && c.kind === 'creator' && (
-                <span
-                  className="status-dot"
-                  title={c.status}
-                  style={{
-                    background:
-                      c.status === 'ended'
-                        ? '#8aa1ae'
-                        : c.status === 'paused'
-                          ? '#fab219'
-                          : '#7fcdf3',
-                  }}
-                />
-              )}
+              <span className="nav-child-icon">🔑</span>
+              <span className="nav-label">Password health</span>
             </button>
-          ))}
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                className={`nav-item nav-child ${
+                  !searching && route.view === 'service' && route.id === g.id
+                    ? 'nav-item-active'
+                    : ''
+                }`}
+                onClick={() => {
+                  setQuery('');
+                  setRoute({ view: 'service', id: g.id });
+                }}
+              >
+                <ServiceIcon serviceKey={g.key} serviceUrl={g.url} size={20} />
+                <span className="nav-label">
+                  {g.name} ({g.count})
+                </span>
+              </button>
+            ))}
+          </NavGroup>
+
+          {navItem('Secure notes', { view: 'notes' }, on('notes'))}
+          {navItem('Activity', { view: 'activity' }, on('activity'))}
         </nav>
 
         <div className="sidebar-footer">
