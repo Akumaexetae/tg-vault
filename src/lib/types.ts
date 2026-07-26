@@ -141,6 +141,23 @@ export interface SecureNote {
   updated_by: User;
 }
 
+export type Lane = 'todo' | 'doing' | 'done';
+
+export interface BoardCard {
+  id: string;
+  title: string;
+  notes: string | null;
+  lane: Lane;
+  /** Fractional index — see lib/board.ts. */
+  position: number;
+  assignee: User | null;
+  creator_id: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+  updated_by: User;
+}
+
 export interface Activity {
   id: string;
   who: User;
@@ -155,5 +172,6 @@ export interface VaultData {
   notes: SecureNote[];
   documents: CreatorDocument[];
   earnings: CreatorEarning[];
+  cards: BoardCard[];
   activity: Activity[];
 }

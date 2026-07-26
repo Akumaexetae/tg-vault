@@ -26,6 +26,11 @@ import {
   saveEarning,
   saveEarnings,
   setEarningPaid,
+  createCard,
+  updateCard,
+  moveCard,
+  deleteCard,
+  rebalanceLane,
   saveNote,
   setPinned,
   updateCreator,
@@ -42,6 +47,8 @@ import type {
   CreatorDocument,
   CreatorEarning,
   CreatorInput,
+  BoardCard,
+  Lane,
   Entry,
   EntryInput,
   SecureNote,
@@ -53,6 +60,8 @@ import { EntryListView } from './views/EntryListView';
 import { HomeView } from './views/HomeView';
 import { ImportModal } from './views/money/ImportModal';
 import { MoneyView } from './views/money/MoneyView';
+import { BoardView } from './views/planning/BoardView';
+import { CardModal, type CardInput } from './views/planning/CardModal';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
 import { CreatorModal, toInput } from './views/dossier/CreatorModal';
@@ -60,11 +69,13 @@ import { DocumentsView, type NewDocument } from './views/dossier/DocumentsView';
 import { DossierView } from './views/dossier/DossierView';
 import { EarningsModal } from './views/dossier/EarningsModal';
 import { sortCreators } from './lib/creators/sort';
+import { needsRebalance, positionForDrop, rebalance } from './lib/board';
 
 type Route =
   | { view: 'dashboard' }
   | { view: 'creators' }
   | { view: 'money' }
+  | { view: 'planning' }
   | { view: 'all' }
   | { view: 'notes' }
   | { view: 'health' }
@@ -150,6 +161,7 @@ function VaultApp({
   const [pendingCreatorDelete, setPendingCreatorDelete] = useState<Creator | null>(null);
   const [pendingDocDelete, setPendingDocDelete] = useState<CreatorDocument | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [cardModal, setCardModal] = useState<BoardCard | { lane: Lane } | null>(null);
   // Sidebar groups remember their open/closed state per install.
   const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean }>(
     () => {
@@ -402,6 +414,50 @@ function VaultApp({
     }
   };
 
+  // --- Planning board ---------------------------------------------------
+  const handleMoveCard = async (card: BoardCard, lane: Lane, index: number) => {
+    const position = positionForDrop(data.cards, lane, index, card.id);
+    try {
+      await moveCard(card.id, lane, position, user);
+      // Repeated drops into the same gap halve it each time; renumber before
+      // the positions collapse into each other.
+      const moved = data.cards.map((c) =>
+        c.id === card.id ? { ...c, lane, position } : c,
+      );
+      if (needsRebalance(moved, lane)) {
+        await rebalanceLane(rebalance(moved, lane));
+      }
+      await refresh();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not move that card', 'error');
+    }
+  };
+
+  const handleSaveCard = async (input: CardInput) => {
+    if (cardModal && 'id' in cardModal) {
+      await updateCard(cardModal.id, input, user, `card “${input.title}”`);
+    } else {
+      const column = data.cards.filter((c) => c.lane === input.lane);
+      await createCard(
+        { ...input, position: positionForDrop(data.cards, input.lane, column.length, '') },
+        user,
+      );
+    }
+    await refresh();
+    toast('Saved');
+  };
+
+  const handleDeleteCard = async (card: BoardCard) => {
+    setCardModal(null);
+    try {
+      await deleteCard(card.id, user, card.title);
+      await refresh();
+      toast('Card deleted');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
+
   const handleTogglePaid = async (
     earning: CreatorEarning,
     creator: Creator,
@@ -490,6 +546,16 @@ function VaultApp({
           setCreatorTab('overview');
           setRoute({ view: 'creator', id: c.id });
         }}
+      />
+    );
+  } else if (route.view === 'planning') {
+    content = (
+      <BoardView
+        data={data}
+        readOnly={readOnly}
+        onAdd={(lane) => setCardModal({ lane })}
+        onEdit={setCardModal}
+        onMove={handleMoveCard}
       />
     );
   } else if (route.view === 'creators') {
@@ -672,6 +738,7 @@ function VaultApp({
         <nav className="sidebar-nav">
           {navItem('Home', { view: 'dashboard' }, on('dashboard'))}
           {navItem('Money', { view: 'money' }, on('money'))}
+          {navItem('Planning', { view: 'planning' }, on('planning'))}
 
           <NavGroup
             label="Creators"
@@ -890,6 +957,19 @@ function VaultApp({
               : undefined
           }
           onClose={() => setCreatorModal(null)}
+        />
+      )}
+
+      {cardModal && (
+        <CardModal
+          initial={'id' in cardModal ? cardModal : null}
+          defaultLane={'id' in cardModal ? cardModal.lane : cardModal.lane}
+          creators={creators}
+          onSave={handleSaveCard}
+          onDelete={
+            'id' in cardModal ? () => handleDeleteCard(cardModal) : undefined
+          }
+          onClose={() => setCardModal(null)}
         />
       )}
 

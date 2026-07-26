@@ -1713,6 +1713,125 @@ h2 {
   margin-top: 6px;
 }
 
+/* --- Planning board ------------------------------------------------------ */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.board-lane {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+  min-height: 240px;
+}
+.board-lane-over {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--accent);
+}
+
+.board-lane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 10px;
+}
+.board-lane-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+}
+.board-lane-count {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.board-lane-head .nav-group-add {
+  margin-left: auto;
+}
+
+.board-cards {
+  display: flex;
+  flex-direction: column;
+}
+.board-empty {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 14px 0;
+  margin: 0;
+}
+
+.board-card {
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.board-card:hover {
+  border-color: var(--accent);
+}
+.board-card-dragging {
+  opacity: 0.4;
+}
+.board-card-overdue {
+  border-left: 3px solid var(--danger);
+}
+.board-card-title {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.board-card-notes {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.board-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.board-card-who {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+.pill-due {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+.pill-overdue {
+  background: #ffe0e3;
+  color: #b3253a;
+}
+
+/* Drop zones between cards — invisible until something is dragged over them. */
+.board-gap {
+  height: 8px;
+  border-radius: 3px;
+  transition: background 0.1s ease, height 0.1s ease;
+}
+.board-gap-last {
+  height: 26px;
+}
+.board-gap-active {
+  background: var(--accent);
+  height: 10px;
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

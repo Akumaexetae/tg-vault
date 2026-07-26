@@ -6,6 +6,8 @@ import type {
   CreatorDocument,
   CreatorEarning,
   CreatorInput,
+  BoardCard,
+  Lane,
   Entry,
   EntryInput,
   PasswordChange,
@@ -38,12 +40,13 @@ function asError(error: {
 }
 
 export async function fetchAll(): Promise<VaultData> {
-  const [creators, entries, notes, documents, earnings, activity] = await Promise.all([
+  const [creators, entries, notes, documents, earnings, cards, activity] = await Promise.all([
     getClient().from('creators').select('*').order('name'),
     getClient().from('entries').select('*').order('service_name'),
     getClient().from('secure_notes').select('*').order('title'),
     getClient().from('creator_documents').select('*').order('created_at'),
     getClient().from('creator_earnings').select('*').order('month'),
+    getClient().from('board_cards').select('*').order('position'),
     getClient()
       .from('activity')
       .select('*')
@@ -55,6 +58,7 @@ export async function fetchAll(): Promise<VaultData> {
   if (notes.error) throw asError(notes.error);
   if (documents.error) throw asError(documents.error);
   if (earnings.error) throw asError(earnings.error);
+  if (cards.error) throw asError(cards.error);
   if (activity.error) throw asError(activity.error);
   return {
     creators: creators.data as Creator[],
@@ -62,6 +66,7 @@ export async function fetchAll(): Promise<VaultData> {
     notes: notes.data as SecureNote[],
     documents: documents.data as CreatorDocument[],
     earnings: earnings.data as CreatorEarning[],
+    cards: cards.data as BoardCard[],
     activity: activity.data as Activity[],
   };
 }
@@ -288,6 +293,76 @@ export async function deleteDocument(
   const { error } = await getClient().from('creator_documents').delete().eq('id', id);
   if (error) throw asError(error);
   await logActivity(who, 'deleted', `document “${label}”`);
+}
+
+// --- Planning board --------------------------------------------------------
+export async function createCard(
+  card: {
+    title: string;
+    notes: string | null;
+    lane: Lane;
+    position: number;
+    assignee: User | null;
+    creator_id: string | null;
+    due_date: string | null;
+  },
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('board_cards')
+    .insert({ ...card, updated_by: who });
+  if (error) throw asError(error);
+  await logActivity(who, 'created', `card “${card.title}”`);
+}
+
+export async function updateCard(
+  id: string,
+  patch: Partial<Omit<BoardCard, 'id' | 'created_at'>>,
+  who: User,
+  label?: string,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('board_cards')
+    .update({ ...patch, updated_by: who, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw asError(error);
+  if (label) await logActivity(who, 'updated', label);
+}
+
+/** Moves are frequent and low-value; they don't clutter the activity feed. */
+export async function moveCard(
+  id: string,
+  lane: Lane,
+  position: number,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('board_cards')
+    .update({ lane, position, updated_by: who, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw asError(error);
+}
+
+export async function rebalanceLane(
+  updates: { id: string; position: number }[],
+): Promise<void> {
+  for (const u of updates) {
+    const { error } = await getClient()
+      .from('board_cards')
+      .update({ position: u.position })
+      .eq('id', u.id);
+    if (error) throw asError(error);
+  }
+}
+
+export async function deleteCard(
+  id: string,
+  who: User,
+  title: string,
+): Promise<void> {
+  const { error } = await getClient().from('board_cards').delete().eq('id', id);
+  if (error) throw asError(error);
+  await logActivity(who, 'deleted', `card “${title}”`);
 }
 
 export async function setEarningPaid(
