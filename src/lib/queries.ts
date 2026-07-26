@@ -4,14 +4,19 @@ import type {
   Creator,
   Entry,
   EntryInput,
+  PasswordChange,
+  SecureNote,
   User,
   VaultData,
 } from './types';
 
+const HISTORY_LIMIT = 10;
+
 export async function fetchAll(): Promise<VaultData> {
-  const [creators, entries, activity] = await Promise.all([
+  const [creators, entries, notes, activity] = await Promise.all([
     supabase.from('creators').select('*').order('name'),
     supabase.from('entries').select('*').order('service_name'),
+    supabase.from('secure_notes').select('*').order('title'),
     supabase
       .from('activity')
       .select('*')
@@ -20,10 +25,12 @@ export async function fetchAll(): Promise<VaultData> {
   ]);
   if (creators.error) throw creators.error;
   if (entries.error) throw entries.error;
+  if (notes.error) throw notes.error;
   if (activity.error) throw activity.error;
   return {
     creators: creators.data as Creator[],
     entries: entries.data as Entry[],
+    notes: notes.data as SecureNote[],
     activity: activity.data as Activity[],
   };
 }
@@ -33,7 +40,6 @@ async function logActivity(
   action: Activity['action'],
   entryLabel: string,
 ): Promise<void> {
-  // Best-effort: never block the main mutation on the log write.
   await supabase
     .from('activity')
     .insert({ who, action, entry_label: entryLabel });
@@ -52,17 +58,40 @@ export async function createEntry(
 }
 
 export async function updateEntry(
-  id: string,
+  previous: Entry,
   input: EntryInput,
   who: User,
   label: string,
 ): Promise<void> {
+  // Keep the outgoing password so a failed rotation is recoverable.
+  const changed = previous.password && previous.password !== input.password;
+  const history: PasswordChange[] = changed
+    ? [
+        {
+          password: previous.password,
+          changed_at: new Date().toISOString(),
+          changed_by: who,
+        },
+        ...(previous.history ?? []),
+      ].slice(0, HISTORY_LIMIT)
+    : (previous.history ?? []);
+
   const { error } = await supabase
     .from('entries')
-    .update({ ...input, updated_by: who, updated_at: new Date().toISOString() })
-    .eq('id', id);
+    .update({
+      ...input,
+      history,
+      updated_by: who,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', previous.id);
   if (error) throw error;
   await logActivity(who, 'updated', label);
+}
+
+export async function setPinned(id: string, pinned: boolean): Promise<void> {
+  const { error } = await supabase.from('entries').update({ pinned }).eq('id', id);
+  if (error) throw error;
 }
 
 export async function deleteEntry(
@@ -88,7 +117,42 @@ export async function createCreator(
   return data as Creator;
 }
 
-export async function deleteCreator(id: string): Promise<void> {
-  const { error } = await supabase.from('creators').delete().eq('id', id);
+// --- Secure notes ----------------------------------------------------------
+export async function saveNote(
+  note: { id?: string; title: string; body: string; creator_id: string | null },
+  who: User,
+): Promise<void> {
+  if (note.id) {
+    const { error } = await supabase
+      .from('secure_notes')
+      .update({
+        title: note.title,
+        body: note.body,
+        creator_id: note.creator_id,
+        updated_by: who,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', note.id);
+    if (error) throw error;
+    await logActivity(who, 'updated', `note “${note.title}”`);
+  } else {
+    const { error } = await supabase.from('secure_notes').insert({
+      title: note.title,
+      body: note.body,
+      creator_id: note.creator_id,
+      updated_by: who,
+    });
+    if (error) throw error;
+    await logActivity(who, 'created', `note “${note.title}”`);
+  }
+}
+
+export async function deleteNote(
+  id: string,
+  who: User,
+  title: string,
+): Promise<void> {
+  const { error } = await supabase.from('secure_notes').delete().eq('id', id);
   if (error) throw error;
+  await logActivity(who, 'deleted', `note “${title}”`);
 }

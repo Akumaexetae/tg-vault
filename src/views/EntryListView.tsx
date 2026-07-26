@@ -10,8 +10,10 @@ interface Props {
   readOnly: boolean;
   showCreator?: boolean;
   emptyText?: string;
+  reusedIds: Set<string>;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
+  onTogglePin: (entry: Entry) => void;
   onAdd: () => void;
   headerExtra?: ReactNode;
 }
@@ -25,8 +27,10 @@ export function EntryListView({
   readOnly,
   showCreator = true,
   emptyText = 'No accounts here yet.',
+  reusedIds,
   onEdit,
   onDelete,
+  onTogglePin,
   onAdd,
   headerExtra,
 }: Props) {
@@ -55,8 +59,10 @@ export function EntryListView({
               creators={creators}
               readOnly={readOnly}
               showCreator={showCreator}
+              reused={reusedIds.has(e.id)}
               onEdit={onEdit}
               onDelete={onDelete}
+              onTogglePin={onTogglePin}
             />
           ))}
         </div>

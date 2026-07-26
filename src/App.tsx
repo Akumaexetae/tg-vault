@@ -1,26 +1,35 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CommandPalette } from './components/CommandPalette';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { EntryModal } from './components/EntryModal';
 import { IdentityScreen } from './components/IdentityScreen';
 import { ServiceIcon } from './components/ServiceIcon';
 import { ToastProvider, useToast } from './components/Toast';
 import { useVault } from './hooks/useVault';
+import { backupFilename, buildBackup, buildCsv } from './lib/backup';
 import { groupIdOf, serviceGroups } from './lib/groups';
 import {
   createCreator,
   createEntry,
   deleteEntry,
+  deleteNote,
+  saveNote,
+  setPinned,
   updateEntry,
 } from './lib/queries';
 import { entryLabel, filterEntries } from './lib/search';
-import type { Creator, Entry, EntryInput, User } from './lib/types';
+import type { Creator, Entry, EntryInput, SecureNote, User } from './lib/types';
 import { ActivityView } from './views/ActivityView';
 import { DashboardView } from './views/DashboardView';
 import { EntryListView } from './views/EntryListView';
+import { HealthView } from './views/HealthView';
+import { NotesView } from './views/NotesView';
 
 type Route =
   | { view: 'dashboard' }
   | { view: 'all' }
+  | { view: 'notes' }
+  | { view: 'health' }
   | { view: 'activity' }
   | { view: 'service'; id: string }
   | { view: 'creator'; id: string };
@@ -66,11 +75,37 @@ function VaultApp({ user }: { user: User }) {
   const [query, setQuery] = useState('');
   const [modal, setModal] = useState<ModalState>(null);
   const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
+  const [pendingNoteDelete, setPendingNoteDelete] = useState<SecureNote | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [filterService, setFilterService] = useState('');
   const [filterCreator, setFilterCreator] = useState('');
 
   const readOnly = status !== 'online';
   const groups = useMemo(() => serviceGroups(data?.entries ?? []), [data]);
+
+  // Passwords appearing on more than one account — surfaced as a "reused" flag.
+  const reusedIds = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const e of data?.entries ?? []) {
+      if (e.password) counts.set(e.password, (counts.get(e.password) ?? 0) + 1);
+    }
+    return new Set(
+      (data?.entries ?? [])
+        .filter((e) => (counts.get(e.password) ?? 0) > 1)
+        .map((e) => e.id),
+    );
+  }, [data]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   if (status === 'unconfigured') {
     return (
@@ -97,13 +132,13 @@ function VaultApp({ user }: { user: User }) {
     );
   }
 
-  const { creators, entries, activity } = data;
+  const { creators, entries, notes, activity } = data;
 
   // --- Mutations ------------------------------------------------------
   const handleSave = async (input: EntryInput) => {
     const label = entryLabel(input, creators);
     if (modal?.mode === 'edit') {
-      await updateEntry(modal.entry.id, input, user, label);
+      await updateEntry(modal.entry, input, user, label);
     } else {
       await createEntry(input, user, label);
     }
@@ -122,6 +157,15 @@ function VaultApp({ user }: { user: User }) {
     }
   };
 
+  const handleTogglePin = async (entry: Entry) => {
+    try {
+      await setPinned(entry.id, !entry.pinned);
+      await refresh();
+    } catch {
+      toast('Could not update pin', 'error');
+    }
+  };
+
   const handleAddCreator = async (name: string): Promise<Creator | null> => {
     try {
       const color = CREATOR_COLORS[creators.length % CREATOR_COLORS.length];
@@ -132,6 +176,53 @@ function VaultApp({ user }: { user: User }) {
       toast('Could not add creator — name taken?', 'error');
       return null;
     }
+  };
+
+  const handleSaveNote = async (note: {
+    id?: string;
+    title: string;
+    body: string;
+    creator_id: string | null;
+  }) => {
+    await saveNote(note, user);
+    await refresh();
+    toast('Note saved');
+  };
+
+  const handleDeleteNote = async (note: SecureNote) => {
+    setPendingNoteDelete(null);
+    try {
+      await deleteNote(note.id, user, note.title);
+      await refresh();
+      toast('Note deleted');
+    } catch {
+      toast('Delete failed — are you online?', 'error');
+    }
+  };
+
+  const handleExport = async (format: 'json' | 'csv') => {
+    const now = new Date().toISOString();
+    const contents =
+      format === 'json'
+        ? JSON.stringify(buildBackup(data, now), null, 2)
+        : buildCsv(data);
+    try {
+      const saved = await window.vaultBridge?.saveBackup({
+        filename: backupFilename(now, format),
+        contents,
+      });
+      if (saved) toast(`Backup saved — ${format.toUpperCase()}`);
+    } catch {
+      toast('Could not save backup', 'error');
+    }
+  };
+
+  const rowHandlers = {
+    reusedIds,
+    onEdit: (e: Entry) => setModal({ mode: 'edit', entry: e }),
+    onDelete: setPendingDelete,
+    onTogglePin: handleTogglePin,
+    onAdd: () => setModal({ mode: 'new' }),
   };
 
   // --- Route content ----------------------------------------------------
@@ -145,9 +236,7 @@ function VaultApp({ user }: { user: User }) {
         creators={creators}
         readOnly={readOnly}
         emptyText="Nothing matches."
-        onEdit={(e) => setModal({ mode: 'edit', entry: e })}
-        onDelete={setPendingDelete}
-        onAdd={() => setModal({ mode: 'new' })}
+        {...rowHandlers}
       />
     );
   } else if (route.view === 'dashboard') {
@@ -155,9 +244,8 @@ function VaultApp({ user }: { user: User }) {
       <DashboardView
         data={data}
         readOnly={readOnly}
-        onEdit={(e) => setModal({ mode: 'edit', entry: e })}
-        onDelete={setPendingDelete}
-        onAdd={() => setModal({ mode: 'new' })}
+        onShowHealth={() => setRoute({ view: 'health' })}
+        {...rowHandlers}
       />
     );
   } else if (route.view === 'all') {
@@ -172,9 +260,7 @@ function VaultApp({ user }: { user: User }) {
         entries={filtered}
         creators={creators}
         readOnly={readOnly}
-        onEdit={(e) => setModal({ mode: 'edit', entry: e })}
-        onDelete={setPendingDelete}
-        onAdd={() => setModal({ mode: 'new' })}
+        {...rowHandlers}
         headerExtra={
           <div className="filter-row">
             <select
@@ -219,8 +305,7 @@ function VaultApp({ user }: { user: User }) {
         entries={list}
         creators={creators}
         readOnly={readOnly}
-        onEdit={(e) => setModal({ mode: 'edit', entry: e })}
-        onDelete={setPendingDelete}
+        {...rowHandlers}
         onAdd={() => setModal({ mode: 'new', serviceKey: group?.key })}
       />
     );
@@ -235,9 +320,30 @@ function VaultApp({ user }: { user: User }) {
         creators={creators}
         readOnly={readOnly}
         showCreator={false}
-        onEdit={(e) => setModal({ mode: 'edit', entry: e })}
-        onDelete={setPendingDelete}
+        {...rowHandlers}
         onAdd={() => setModal({ mode: 'new', creatorId: route.id })}
+      />
+    );
+  } else if (route.view === 'notes') {
+    content = (
+      <NotesView
+        notes={notes}
+        creators={creators}
+        readOnly={readOnly}
+        onSave={handleSaveNote}
+        onDelete={setPendingNoteDelete}
+      />
+    );
+  } else if (route.view === 'health') {
+    content = (
+      <HealthView
+        entries={entries}
+        creators={creators}
+        readOnly={readOnly}
+        reusedIds={reusedIds}
+        onEdit={rowHandlers.onEdit}
+        onDelete={rowHandlers.onDelete}
+        onTogglePin={handleTogglePin}
       />
     );
   } else {
@@ -257,6 +363,8 @@ function VaultApp({ user }: { user: User }) {
     </button>
   );
 
+  const on = (view: Route['view']) => !searching && route.view === view;
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -265,9 +373,11 @@ function VaultApp({ user }: { user: User }) {
         </div>
 
         <nav className="sidebar-nav">
-          {navItem('Dashboard', { view: 'dashboard' }, !searching && route.view === 'dashboard')}
-          {navItem('All accounts', { view: 'all' }, !searching && route.view === 'all')}
-          {navItem('Activity', { view: 'activity' }, !searching && route.view === 'activity')}
+          {navItem('Dashboard', { view: 'dashboard' }, on('dashboard'))}
+          {navItem('All accounts', { view: 'all' }, on('all'))}
+          {navItem('Secure notes', { view: 'notes' }, on('notes'))}
+          {navItem('Password health', { view: 'health' }, on('health'))}
+          {navItem('Activity', { view: 'activity' }, on('activity'))}
 
           <div className="nav-section">Services</div>
           {groups.map((g) =>
@@ -292,9 +402,19 @@ function VaultApp({ user }: { user: User }) {
           )}
         </nav>
 
-        <div className="sidebar-user">
-          <span className={`activity-avatar avatar-${user.toLowerCase()}`}>{user[0]}</span>
-          {user}
+        <div className="sidebar-footer">
+          <div className="backup-row">
+            <button className="btn btn-tiny" onClick={() => handleExport('json')}>
+              Backup JSON
+            </button>
+            <button className="btn btn-tiny" onClick={() => handleExport('csv')}>
+              CSV
+            </button>
+          </div>
+          <div className="sidebar-user">
+            <span className={`activity-avatar avatar-${user.toLowerCase()}`}>{user[0]}</span>
+            {user}
+          </div>
         </div>
       </aside>
 
@@ -302,7 +422,7 @@ function VaultApp({ user }: { user: User }) {
         <header className="topbar">
           <input
             className="input search-input"
-            placeholder="Search services, creators, usernames…"
+            placeholder="Search services, creators, usernames…    (Ctrl+K for quick copy)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -324,6 +444,15 @@ function VaultApp({ user }: { user: User }) {
         <main className="content">{content}</main>
       </div>
 
+      {paletteOpen && (
+        <CommandPalette
+          entries={entries}
+          creators={creators}
+          onClose={() => setPaletteOpen(false)}
+          onToast={toast}
+        />
+      )}
+
       {modal && (
         <EntryModal
           initial={modal.mode === 'edit' ? modal.entry : null}
@@ -343,6 +472,16 @@ function VaultApp({ user }: { user: User }) {
           confirmLabel="Delete"
           onConfirm={() => handleDelete(pendingDelete)}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+
+      {pendingNoteDelete && (
+        <ConfirmDialog
+          title="Delete note?"
+          body={`This permanently removes “${pendingNoteDelete.title}” for both of you.`}
+          confirmLabel="Delete"
+          onConfirm={() => handleDeleteNote(pendingNoteDelete)}
+          onCancel={() => setPendingNoteDelete(null)}
         />
       )}
     </div>

@@ -1,21 +1,45 @@
 import { EntryRow } from '../components/EntryRow';
 import { serviceGroups } from '../lib/groups';
+import { healthReport } from '../lib/health';
 import { timeAgo } from '../lib/time';
 import type { Entry, VaultData } from '../lib/types';
 
 interface Props {
   data: VaultData;
   readOnly: boolean;
+  reusedIds: Set<string>;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
+  onTogglePin: (entry: Entry) => void;
   onAdd: () => void;
+  onShowHealth: () => void;
 }
 
-export function DashboardView({ data, readOnly, onEdit, onDelete, onAdd }: Props) {
+export function DashboardView({
+  data,
+  readOnly,
+  reusedIds,
+  onEdit,
+  onDelete,
+  onTogglePin,
+  onAdd,
+  onShowHealth,
+}: Props) {
   const groups = serviceGroups(data.entries);
+  const pinned = data.entries.filter((e) => e.pinned);
   const recent = [...data.entries]
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, 8);
+  const health = healthReport(data.entries);
+  const issues = new Set([...health.weak, ...health.reused, ...health.old].map((e) => e.id));
+
+  const rowProps = {
+    creators: data.creators,
+    readOnly,
+    onEdit,
+    onDelete,
+    onTogglePin,
+  };
 
   return (
     <div className="view">
@@ -39,6 +63,12 @@ export function DashboardView({ data, readOnly, onEdit, onDelete, onAdd }: Props
           <span className="stat-value">{data.creators.length}</span>
           <span className="stat-label">Creators</span>
         </div>
+        <button className="stat-card card stat-card-btn" onClick={onShowHealth}>
+          <span className={`stat-value ${issues.size ? 'stat-warn' : 'stat-ok'}`}>
+            {issues.size}
+          </span>
+          <span className="stat-label">Need attention</span>
+        </button>
       </div>
 
       {data.entries.length === 0 ? (
@@ -51,17 +81,20 @@ export function DashboardView({ data, readOnly, onEdit, onDelete, onAdd }: Props
       ) : (
         <div className="dash-columns">
           <section className="dash-main">
+            {pinned.length > 0 && (
+              <>
+                <h2>★ Pinned</h2>
+                <div className="entry-list dash-pinned">
+                  {pinned.map((e) => (
+                    <EntryRow key={e.id} entry={e} reused={reusedIds.has(e.id)} {...rowProps} />
+                  ))}
+                </div>
+              </>
+            )}
             <h2>Recently updated</h2>
             <div className="entry-list">
               {recent.map((e) => (
-                <EntryRow
-                  key={e.id}
-                  entry={e}
-                  creators={data.creators}
-                  readOnly={readOnly}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
+                <EntryRow key={e.id} entry={e} reused={reusedIds.has(e.id)} {...rowProps} />
               ))}
             </div>
           </section>

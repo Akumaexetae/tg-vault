@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTotp } from '../hooks/useTotp';
+import { isOld, isWeak } from '../lib/health';
 import { timeAgo } from '../lib/time';
+import { totpCode } from '../lib/totp';
 import type { Creator, Entry } from '../lib/types';
 import { ServiceIcon } from './ServiceIcon';
 import { useToast } from './Toast';
@@ -10,8 +12,10 @@ interface Props {
   creators: Creator[];
   readOnly: boolean;
   showCreator?: boolean;
+  reused?: boolean;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
+  onTogglePin: (entry: Entry) => void;
 }
 
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -75,29 +79,72 @@ export function EntryRow({
   creators,
   readOnly,
   showCreator = true,
+  reused = false,
   onEdit,
   onDelete,
+  onTogglePin,
 }: Props) {
   const [revealed, setRevealed] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const toast = useToast();
   const creator = creators.find((c) => c.id === entry.creator_id);
+  const history = entry.history ?? [];
   const hasDetails =
-    !!entry.recovery || entry.custom_fields.length > 0 || !!entry.notes;
+    !!entry.recovery || entry.custom_fields.length > 0 || !!entry.notes ||
+    !!entry.proxy || history.length > 0;
+
+  const flags = [
+    isWeak(entry.password) && { key: 'weak', label: 'weak' },
+    reused && { key: 'reused', label: 'reused' },
+    isOld(entry) && { key: 'old', label: 'old' },
+  ].filter(Boolean) as { key: string; label: string }[];
+
+  const handleLogin = () => {
+    window.vaultBridge?.openLogin({
+      id: entry.id,
+      url: entry.service_url,
+      username: entry.username,
+      password: entry.password,
+      totp: entry.totp_secret ? (totpCode(entry.totp_secret)?.code ?? null) : null,
+      proxy: entry.proxy,
+    });
+  };
+
+  const handleLogout = async () => {
+    await window.vaultBridge?.logoutAccount(entry.id);
+    toast('Session cleared for this account');
+  };
 
   return (
     <div className="entry-row card">
       <div className="entry-main">
+        <button
+          className={`pin-btn ${entry.pinned ? 'pin-btn-on' : ''}`}
+          title={entry.pinned ? 'Unpin' : 'Pin to dashboard'}
+          disabled={readOnly}
+          onClick={() => onTogglePin(entry)}
+        >
+          {entry.pinned ? '★' : '☆'}
+        </button>
+
         <ServiceIcon serviceKey={entry.service_key} serviceUrl={entry.service_url} />
         <div className="entry-id">
           <span className="entry-service">{entry.service_name}</span>
-          {showCreator && creator && (
-            <span
-              className="pill"
-              style={{ background: `${creator.color}22`, color: creator.color }}
-            >
-              {creator.name}
-            </span>
-          )}
+          <span className="entry-tags">
+            {showCreator && creator && (
+              <span
+                className="pill"
+                style={{ background: `${creator.color}22`, color: creator.color }}
+              >
+                {creator.name}
+              </span>
+            )}
+            {flags.map((f) => (
+              <span key={f.key} className={`pill pill-${f.key}`}>
+                {f.label}
+              </span>
+            ))}
+          </span>
         </div>
 
         <div className="entry-field entry-username" title={entry.username}>
@@ -125,14 +172,7 @@ export function EntryRow({
             <button
               className="btn btn-login"
               title="Open this account in its own logged-in window"
-              onClick={() =>
-                window.vaultBridge?.openLogin({
-                  id: entry.id,
-                  url: entry.service_url,
-                  username: entry.username,
-                  password: entry.password,
-                })
-              }
+              onClick={handleLogin}
             >
               <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
                 <path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z" />
@@ -177,6 +217,12 @@ export function EntryRow({
 
       {expanded && (
         <div className="entry-details">
+          {entry.proxy && (
+            <div className="detail-block">
+              <span className="detail-label">Proxy</span>
+              <span className="detail-field-value">{entry.proxy}</span>
+            </div>
+          )}
           {entry.recovery && (
             <div className="detail-block">
               <span className="detail-label">Recovery</span>
@@ -203,9 +249,30 @@ export function EntryRow({
               <pre className="detail-text">{entry.notes}</pre>
             </div>
           )}
-          <span className="detail-meta">
-            Updated {timeAgo(entry.updated_at)} by {entry.updated_by}
-          </span>
+          {history.length > 0 && (
+            <div className="detail-block">
+              <span className="detail-label">History</span>
+              <div className="detail-fields">
+                {history.map((h, i) => (
+                  <div key={i} className="detail-field">
+                    <span className="detail-field-value history-pw">{h.password}</span>
+                    <CopyButton value={h.password} label="Old password" />
+                    <span className="detail-meta">
+                      replaced {timeAgo(h.changed_at)} by {h.changed_by}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="detail-footer">
+            <span className="detail-meta">
+              Updated {timeAgo(entry.updated_at)} by {entry.updated_by}
+            </span>
+            <button className="btn btn-ghost btn-tiny" onClick={handleLogout}>
+              Clear saved session
+            </button>
+          </div>
         </div>
       )}
     </div>

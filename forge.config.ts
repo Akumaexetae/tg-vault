@@ -18,6 +18,18 @@ const config: ForgeConfig = {
     new MakerRpm({}),
     new MakerDeb({}),
   ],
+  // Auto-update: `npm run publish` pushes the installer to GitHub releases and
+  // both installs pick it up within the hour. Needs GITHUB_TOKEN in the env and
+  // the repo below to exist. See README → Auto-update.
+  publishers: [
+    {
+      name: '@electron-forge/publisher-github',
+      config: {
+        repository: { owner: 'TG-AGENCY', name: 'tg-vault' },
+        prerelease: false,
+      },
+    },
+  ],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

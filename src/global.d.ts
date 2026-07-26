@@ -11,7 +11,14 @@ declare global {
         url: string;
         username: string;
         password: string;
+        totp: string | null;
+        proxy: string | null;
       }) => Promise<void>;
+      logoutAccount: (id: string) => Promise<void>;
+      saveBackup: (opts: {
+        filename: string;
+        contents: string;
+      }) => Promise<string | null>;
     };
   }
 }

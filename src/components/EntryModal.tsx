@@ -13,6 +13,14 @@ interface Props {
   onClose: () => void;
 }
 
+/** Accepts a raw base32 secret or a full otpauth:// URI copied from a QR code. */
+export function extractSecret(input: string): string {
+  const value = input.trim();
+  if (!/^otpauth:\/\//i.test(value)) return value;
+  const match = /[?&]secret=([^&]+)/i.exec(value);
+  return match ? decodeURIComponent(match[1]) : value;
+}
+
 export function EntryModal({
   initial,
   creators,
@@ -39,6 +47,7 @@ export function EntryModal({
   const [username, setUsername] = useState(initial?.username ?? '');
   const [password, setPassword] = useState(initial?.password ?? '');
   const [totpSecret, setTotpSecret] = useState(initial?.totp_secret ?? '');
+  const [proxy, setProxy] = useState(initial?.proxy ?? '');
   const [recovery, setRecovery] = useState(initial?.recovery ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [fields, setFields] = useState<CustomField[]>(initial?.custom_fields ?? []);
@@ -82,6 +91,7 @@ export function EntryModal({
       username: username.trim(),
       password,
       totp_secret: totpSecret.trim() || null,
+      proxy: proxy.trim() || null,
       recovery: recovery.trim() || null,
       custom_fields: fields.filter((f) => f.key.trim() || f.value.trim()),
       notes: notes.trim() || null,
@@ -199,9 +209,18 @@ export function EntryModal({
             <label className="form-label">2FA secret (optional, base32)</label>
             <input
               className="input"
-              placeholder="e.g. JBSWY3DPEHPK3PXP"
+              placeholder="e.g. JBSWY3DPEHPK3PXP — or paste an otpauth:// link"
               value={totpSecret}
-              onChange={(e) => setTotpSecret(e.target.value)}
+              onChange={(e) => setTotpSecret(extractSecret(e.target.value))}
+            />
+          </div>
+          <div className="form-col">
+            <label className="form-label">Proxy for login window (optional)</label>
+            <input
+              className="input"
+              placeholder="user:pass@host:port  or  host:port"
+              value={proxy}
+              onChange={(e) => setProxy(e.target.value)}
             />
           </div>
         </div>

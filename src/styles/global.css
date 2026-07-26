@@ -120,13 +120,209 @@ h2 {
   text-overflow: ellipsis;
 }
 
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding: 10px 14px 12px;
+}
+.backup-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.backup-row .btn {
+  flex: 1;
+}
+
 .sidebar-user {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--border);
+  padding: 4px 6px;
   font-weight: 600;
+}
+
+.btn-tiny {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+/* --- Pins, health flags, history ------------------------------------- */
+.pin-btn {
+  border: none;
+  background: transparent;
+  color: #c9d6de;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.pin-btn:hover {
+  color: #f0b400;
+}
+.pin-btn-on {
+  color: #f5b800;
+}
+.pin-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.entry-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.pill-weak {
+  background: #ffe9d6;
+  color: #b45309;
+}
+.pill-reused {
+  background: #ffe0e3;
+  color: #b3253a;
+}
+.pill-old {
+  background: #ececf5;
+  color: #5b5b7a;
+}
+
+.history-pw {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.detail-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-card-btn {
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+.stat-card-btn:hover {
+  border-color: var(--accent);
+}
+.stat-warn {
+  color: #d97706;
+}
+.stat-ok {
+  color: #16a34a;
+}
+
+.dash-pinned {
+  margin-bottom: 20px;
+}
+
+.health-section {
+  margin-bottom: 26px;
+}
+.health-count {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-radius: 99px;
+  padding: 1px 8px;
+  font-size: 12px;
+}
+.health-hint {
+  margin: -6px 0 10px;
+  font-size: 12.5px;
+}
+
+/* --- Secure notes ------------------------------------------------------ */
+.note-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+.note-card {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.note-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.note-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.note-body {
+  margin: 0;
+  font-family: Consolas, monospace;
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f7fcff;
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.note-textarea {
+  min-height: 180px;
+  font-family: Consolas, monospace;
+}
+
+/* --- Command palette ---------------------------------------------------- */
+.palette-overlay {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+.palette {
+  width: 620px;
+  max-width: calc(100vw - 60px);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0, 50, 90, 0.3);
+  overflow: hidden;
+}
+.palette-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
+  font-size: 16px;
+  outline: none;
+  color: var(--ink);
+}
+.palette-list {
+  max-height: 45vh;
+  overflow-y: auto;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.palette-item-active {
+  background: var(--accent-soft);
+}
+.palette-service {
+  font-weight: 700;
+}
+.palette-username {
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 45%;
+}
+.palette-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--ink-soft);
 }
 
 .main-col {

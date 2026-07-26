@@ -1,7 +1,19 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import started from 'electron-squirrel-startup';
+import { updateElectronApp } from 'update-electron-app';
+import { parseProxy } from './lib/proxy';
+
+// Auto-update from GitHub releases. No-ops in dev and when the app isn't
+// packaged; see README "Auto-update" for the one-time repo setup.
+if (app.isPackaged) {
+  try {
+    updateElectronApp({ updateInterval: '1 hour' });
+  } catch {
+    /* not configured yet — app still runs fine */
+  }
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -36,63 +48,153 @@ ipcMain.handle('open-external', (_event, url: string) => {
 // --- One-click login -------------------------------------------------------
 // Opens the service in a dedicated window whose session is isolated PER
 // ACCOUNT (persist:acct-<id>), so multiple accounts on the same service stay
-// logged in side by side. Fills the login form when one is present; never
+// logged in side by side. Fills login and 2FA forms when present; never
 // auto-submits.
-const autofillScript = (username: string, password: string) => `
+const autofillScript = (
+  username: string,
+  password: string,
+  totp: string | null,
+) => `
 (() => {
   const USERNAME = ${JSON.stringify(username)};
   const PASSWORD = ${JSON.stringify(password)};
+  const TOTP = ${JSON.stringify(totp)};
   const setVal = (el, v) => {
     const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     set.call(el, v);
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  const tryFill = () => {
-    const pw = [...document.querySelectorAll('input[type=password]')].find(i => i.offsetParent);
-    if (!pw) return false;
+  const visible = (i) => i.offsetParent !== null;
+
+  const fillLogin = () => {
+    const pw = [...document.querySelectorAll('input[type=password]')].find(visible);
+    if (!pw || pw.dataset.tgFilled) return false;
     const inputs = [...document.querySelectorAll('input')].filter(
-      i => ['text', 'email', 'tel', 'username'].includes(i.type) && i.offsetParent
+      i => ['text', 'email', 'tel', 'username'].includes(i.type) && visible(i)
     );
     const user = inputs.filter(i => i.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING).pop() || inputs[0];
     if (user) setVal(user, USERNAME);
     setVal(pw, PASSWORD);
+    pw.dataset.tgFilled = '1';
     pw.focus();
     return true;
   };
-  // SPA login forms often render late — retry for ~6s.
-  let attempts = 0;
+
+  // 2FA pages: a short numeric field (or 6 single-digit boxes) and no password field.
+  const fill2fa = () => {
+    if (!TOTP) return false;
+    if ([...document.querySelectorAll('input[type=password]')].some(visible)) return false;
+    const candidates = [...document.querySelectorAll('input')].filter(i =>
+      visible(i) && !i.value && ['text', 'tel', 'number', ''].includes(i.type)
+    );
+    const boxes = candidates.filter(i => i.maxLength === 1);
+    if (boxes.length >= TOTP.length) {
+      TOTP.split('').forEach((d, n) => setVal(boxes[n], d));
+      boxes[boxes.length - 1].focus();
+      return true;
+    }
+    const field = candidates.find(i => {
+      const hint = ((i.name || '') + (i.id || '') + (i.autocomplete || '') + (i.placeholder || '') + (i.getAttribute('aria-label') || '')).toLowerCase();
+      return /otp|2fa|two|code|token|auth|verif/.test(hint) || (i.maxLength >= 6 && i.maxLength <= 8);
+    });
+    if (!field || field.dataset.tgFilled) return false;
+    setVal(field, TOTP);
+    field.dataset.tgFilled = '1';
+    field.focus();
+    return true;
+  };
+
+  // SPA forms render late and 2FA appears after submit — keep watching ~60s.
+  let ticks = 0;
   const timer = setInterval(() => {
-    if (tryFill() || ++attempts > 12) clearInterval(timer);
+    fillLogin();
+    fill2fa();
+    if (++ticks > 120) clearInterval(timer);
   }, 500);
-  tryFill();
+  fillLogin();
 })();
 `;
 
+// Proxy credentials, keyed by partition — supplied when the proxy challenges.
+const proxyCreds = new Map<string, { username: string; password: string }>();
+
+app.on('login', (event, webContents, _details, authInfo, callback) => {
+  if (!authInfo.isProxy || !webContents) return;
+  const partition = webContents.session.storagePath ?? '';
+  const found = [...proxyCreds.entries()].find(([key]) => partition.includes(key));
+  if (found) {
+    event.preventDefault();
+    callback(found[1].username, found[1].password);
+  }
+});
+
 ipcMain.handle(
   'login:open',
-  (
+  async (
     _event,
-    opts: { id: string; url: string; username: string; password: string },
+    opts: {
+      id: string;
+      url: string;
+      username: string;
+      password: string;
+      totp: string | null;
+      proxy: string | null;
+    },
   ) => {
     if (!/^https?:\/\//i.test(opts.url)) return;
+    const partition = `persist:acct-${opts.id}`;
+
+    if (opts.proxy) {
+      const parsed = parseProxy(opts.proxy);
+      if (parsed) {
+        await session.fromPartition(partition).setProxy({ proxyRules: parsed.rules });
+        if (parsed.username) {
+          proxyCreds.set(`acct-${opts.id}`, {
+            username: parsed.username,
+            password: parsed.password ?? '',
+          });
+        }
+      }
+    }
+
     const win = new BrowserWindow({
       width: 1150,
       height: 820,
       title: `T&G Vault — ${opts.username}`,
       autoHideMenuBar: true,
       webPreferences: {
-        partition: `persist:acct-${opts.id}`,
+        partition,
         nodeIntegration: false,
         contextIsolation: true,
       },
     });
     win.webContents.on('did-finish-load', () => {
       win.webContents
-        .executeJavaScript(autofillScript(opts.username, opts.password))
+        .executeJavaScript(autofillScript(opts.username, opts.password, opts.totp))
         .catch(() => {});
     });
     win.loadURL(opts.url);
+  },
+);
+
+/** Wipe an account's saved browser session (cookies, storage). */
+ipcMain.handle('login:logout', async (_event, id: string) => {
+  await session.fromPartition(`persist:acct-${id}`).clearStorageData();
+  proxyCreds.delete(`acct-${id}`);
+});
+
+// --- Backup export ---------------------------------------------------------
+ipcMain.handle(
+  'backup:save',
+  async (_event, opts: { filename: string; contents: string }) => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save vault backup',
+      defaultPath: path.join(app.getPath('downloads'), opts.filename),
+    });
+    if (canceled || !filePath) return null;
+    fs.writeFileSync(filePath, opts.contents, 'utf-8');
+    return filePath;
   },
 );
 

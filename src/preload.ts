@@ -11,5 +11,13 @@ contextBridge.exposeInMainWorld('vaultBridge', {
     url: string;
     username: string;
     password: string;
+    totp: string | null;
+    proxy: string | null;
   }): Promise<void> => ipcRenderer.invoke('login:open', opts),
+  logoutAccount: (id: string): Promise<void> =>
+    ipcRenderer.invoke('login:logout', id),
+  saveBackup: (opts: {
+    filename: string;
+    contents: string;
+  }): Promise<string | null> => ipcRenderer.invoke('backup:save', opts),
 });
