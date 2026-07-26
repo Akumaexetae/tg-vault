@@ -31,8 +31,8 @@ const brand = (icon: { path: string; hex: string }): ServiceIconDef => ({
 /** Bundled service catalog — order = display order in pickers/sidebar. */
 export const SERVICES: ServiceDef[] = [
   { key: 'onlyfans', name: 'OnlyFans', url: 'https://onlyfans.com', icon: brand(siOnlyfans) },
-  { key: 'getmysocials', name: 'Getmysocials', url: 'https://getmysocials.com', icon: { type: 'favicon' } },
-  { key: 'onlychat', name: 'Onlychat', url: 'https://onlychat.com', icon: { type: 'favicon' } },
+  { key: 'getmysocials', name: 'Getmysocials', url: 'https://getmysocial.com/dashboard/links', icon: { type: 'favicon' } },
+  { key: 'onlychat', name: 'Onlychat', url: 'https://app.only-chat.ai/?tab=overview', icon: { type: 'favicon' } },
   { key: 'smspool', name: 'SMSPool', url: 'https://smspool.net', icon: { type: 'favicon' } },
   { key: 'instagram', name: 'Instagram', url: 'https://instagram.com', icon: brand(siInstagram) },
   { key: 'tiktok', name: 'TikTok', url: 'https://tiktok.com', icon: brand(siTiktok) },
