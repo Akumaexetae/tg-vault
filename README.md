@@ -60,7 +60,9 @@ npm run make       # Windows installer → out/make/squirrel.windows/x64/
 
 ## Database
 
-Run in the Supabase SQL editor, in order. All are safe to re-run.
+**`supabase/all.sql` is every migration in one file.** Paste it into the SQL editor and run — it's guarded throughout, so it brings an empty *or* half-migrated database up to date, and re-running it is harmless. That's the only thing to run on a new database.
+
+The individual files are kept for history:
 
 | File | Adds |
 |---|---|
@@ -70,6 +72,7 @@ Run in the Supabase SQL editor, in order. All are safe to re-run.
 | `migration-004.sql` | creator avatars |
 | `migration-005.sql` | payout tracking |
 | `migration-006.sql` | planning board |
+| `migration-007.sql` | planning canvas |
 
 Two storage buckets are needed: **`avatars`** (public, 2 MB) and **`documents`** (private, 10 MB). Creating them in the dashboard is more reliable than SQL, and each needs a policy on `storage.objects` — RLS there is always on and can't be disabled.
 
