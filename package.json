@@ -1,7 +1,7 @@
 {
   "name": "tg-vault",
   "productName": "T&G Vault",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Shared password vault for T&G Agency",
   "main": ".vite/build/main.js",
   "private": true,
@@ -50,7 +50,6 @@
     "otpauth": "^9.5.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "simple-icons": "^16.27.1",
-    "update-electron-app": "^3.3.0"
+    "simple-icons": "^16.27.1"
   }
 }

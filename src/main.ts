@@ -1,19 +1,62 @@
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
+import {
+  app,
+  autoUpdater,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  session,
+  shell,
+} from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import started from 'electron-squirrel-startup';
-import { updateElectronApp } from 'update-electron-app';
 import { parseProxy } from './lib/proxy';
 
-// Auto-update from GitHub releases. No-ops in dev and when the app isn't
-// packaged; see README "Auto-update" for the one-time repo setup.
-if (app.isPackaged) {
+/**
+ * Auto-update straight from GitHub releases.
+ *
+ * `/releases/latest/download/` always resolves to the newest published
+ * release, so Squirrel can read RELEASES and the .nupkg from it with no
+ * update server in the middle. (update.electronjs.org would also work, but
+ * it caches lookups for long enough to be unreliable right after a release.)
+ */
+const FEED_URL =
+  'https://github.com/Akumaexetae/tg-vault/releases/latest/download';
+const UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+
+let updateReady = false;
+
+function initAutoUpdate(): void {
+  // Squirrel only exists in an installed build, never in `npm start`.
+  if (!app.isPackaged) return;
   try {
-    updateElectronApp({ updateInterval: '1 hour' });
+    autoUpdater.setFeedURL({ url: FEED_URL });
   } catch {
-    /* not configured yet — app still runs fine */
+    return; // unsupported platform — app runs fine without updates
   }
+
+  // Update problems are never the user's problem: stay silent, retry later.
+  autoUpdater.on('error', () => {});
+  autoUpdater.on('update-downloaded', () => {
+    updateReady = true;
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('update:ready');
+    }
+  });
+
+  autoUpdater.checkForUpdates();
+  setInterval(() => {
+    if (!updateReady) autoUpdater.checkForUpdates();
+  }, UPDATE_INTERVAL_MS);
 }
+
+app.on('ready', initAutoUpdate);
+
+// Renderer asks on load, in case the update landed before the window existed.
+ipcMain.handle('update:status', () => updateReady);
+ipcMain.handle('update:restart', () => {
+  if (updateReady) autoUpdater.quitAndInstall();
+});
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {

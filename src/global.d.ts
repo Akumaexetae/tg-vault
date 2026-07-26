@@ -19,6 +19,9 @@ declare global {
         filename: string;
         contents: string;
       }) => Promise<string | null>;
+      updateStatus: () => Promise<boolean>;
+      restartForUpdate: () => Promise<void>;
+      onUpdateReady: (callback: () => void) => void;
     };
   }
 }

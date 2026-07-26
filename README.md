@@ -37,7 +37,7 @@ RLS is disabled with permissive policies as a fallback — a deliberate choice f
 
 ## Auto-update
 
-`updateElectronApp()` in `src/main.ts` checks GitHub releases hourly (packaged builds only; it no-ops in dev and stays quiet if the repo isn't set up).
+The app reads `https://github.com/Akumaexetae/tg-vault/releases/latest/download/` directly — Squirrel fetches `RELEASES` and the `.nupkg` from there. No third-party update server. Checks on launch and hourly; when an update downloads, a banner offers a restart.
 
 Releases live in the private repo `Akumaexetae/tg-vault`.
 

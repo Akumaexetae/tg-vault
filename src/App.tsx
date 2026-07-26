@@ -106,6 +106,7 @@ function VaultApp({
   const [pendingDelete, setPendingDelete] = useState<Entry | null>(null);
   const [pendingNoteDelete, setPendingNoteDelete] = useState<SecureNote | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [updateReady, setUpdateReady] = useState(false);
   const [filterService, setFilterService] = useState('');
   const [filterCreator, setFilterCreator] = useState('');
 
@@ -124,6 +125,12 @@ function VaultApp({
         .map((e) => e.id),
     );
   }, [data]);
+
+  // Auto-update: the new version is already downloaded, it just needs a restart.
+  useEffect(() => {
+    window.vaultBridge?.updateStatus().then(setUpdateReady).catch(() => {});
+    window.vaultBridge?.onUpdateReady(() => setUpdateReady(true));
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -462,6 +469,18 @@ function VaultApp({
         {status === 'offline' && (
           <div className="offline-banner">
             Offline — showing last synced data. Editing is disabled until you reconnect.
+          </div>
+        )}
+
+        {updateReady && (
+          <div className="update-banner">
+            A new version is ready.
+            <button
+              className="btn btn-tiny update-btn"
+              onClick={() => window.vaultBridge?.restartForUpdate()}
+            >
+              Restart now
+            </button>
           </div>
         )}
 

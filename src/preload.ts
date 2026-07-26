@@ -20,4 +20,9 @@ contextBridge.exposeInMainWorld('vaultBridge', {
     filename: string;
     contents: string;
   }): Promise<string | null> => ipcRenderer.invoke('backup:save', opts),
+  updateStatus: (): Promise<boolean> => ipcRenderer.invoke('update:status'),
+  restartForUpdate: (): Promise<void> => ipcRenderer.invoke('update:restart'),
+  onUpdateReady: (callback: () => void): void => {
+    ipcRenderer.on('update:ready', callback);
+  },
 });
