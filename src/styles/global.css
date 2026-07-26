@@ -141,6 +141,29 @@ h2 {
   font-weight: 600;
 }
 
+.sidebar-disconnect {
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.connect-error {
+  margin-top: 10px;
+}
+.connect-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px;
+}
+.connect-hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.setup-card .input {
+  margin-top: 4px;
+}
+
 .btn-tiny {
   padding: 5px 8px;
   font-size: 12px;

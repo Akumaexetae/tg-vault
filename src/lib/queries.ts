@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getClient } from './supabase';
 import type {
   Activity,
   Creator,
@@ -14,10 +14,10 @@ const HISTORY_LIMIT = 10;
 
 export async function fetchAll(): Promise<VaultData> {
   const [creators, entries, notes, activity] = await Promise.all([
-    supabase.from('creators').select('*').order('name'),
-    supabase.from('entries').select('*').order('service_name'),
-    supabase.from('secure_notes').select('*').order('title'),
-    supabase
+    getClient().from('creators').select('*').order('name'),
+    getClient().from('entries').select('*').order('service_name'),
+    getClient().from('secure_notes').select('*').order('title'),
+    getClient()
       .from('activity')
       .select('*')
       .order('created_at', { ascending: false })
@@ -40,7 +40,7 @@ async function logActivity(
   action: Activity['action'],
   entryLabel: string,
 ): Promise<void> {
-  await supabase
+  await getClient()
     .from('activity')
     .insert({ who, action, entry_label: entryLabel });
 }
@@ -50,7 +50,7 @@ export async function createEntry(
   who: User,
   label: string,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getClient()
     .from('entries')
     .insert({ ...input, updated_by: who });
   if (error) throw error;
@@ -76,7 +76,7 @@ export async function updateEntry(
       ].slice(0, HISTORY_LIMIT)
     : (previous.history ?? []);
 
-  const { error } = await supabase
+  const { error } = await getClient()
     .from('entries')
     .update({
       ...input,
@@ -90,7 +90,7 @@ export async function updateEntry(
 }
 
 export async function setPinned(id: string, pinned: boolean): Promise<void> {
-  const { error } = await supabase.from('entries').update({ pinned }).eq('id', id);
+  const { error } = await getClient().from('entries').update({ pinned }).eq('id', id);
   if (error) throw error;
 }
 
@@ -99,7 +99,7 @@ export async function deleteEntry(
   who: User,
   label: string,
 ): Promise<void> {
-  const { error } = await supabase.from('entries').delete().eq('id', id);
+  const { error } = await getClient().from('entries').delete().eq('id', id);
   if (error) throw error;
   await logActivity(who, 'deleted', label);
 }
@@ -108,7 +108,7 @@ export async function createCreator(
   name: string,
   color: string,
 ): Promise<Creator> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from('creators')
     .insert({ name, color })
     .select()
@@ -123,7 +123,7 @@ export async function saveNote(
   who: User,
 ): Promise<void> {
   if (note.id) {
-    const { error } = await supabase
+    const { error } = await getClient()
       .from('secure_notes')
       .update({
         title: note.title,
@@ -136,7 +136,7 @@ export async function saveNote(
     if (error) throw error;
     await logActivity(who, 'updated', `note “${note.title}”`);
   } else {
-    const { error } = await supabase.from('secure_notes').insert({
+    const { error } = await getClient().from('secure_notes').insert({
       title: note.title,
       body: note.body,
       creator_id: note.creator_id,
@@ -152,7 +152,7 @@ export async function deleteNote(
   who: User,
   title: string,
 ): Promise<void> {
-  const { error } = await supabase.from('secure_notes').delete().eq('id', id);
+  const { error } = await getClient().from('secure_notes').delete().eq('id', id);
   if (error) throw error;
   await logActivity(who, 'deleted', `note “${title}”`);
 }

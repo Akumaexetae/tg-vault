@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isConfigured } from '../config';
 import { fetchAll } from '../lib/queries';
-import { supabase } from '../lib/supabase';
+import { loadConnection } from '../lib/settings';
+import { getClient } from '../lib/supabase';
 import type { VaultData } from '../lib/types';
 
 export type VaultStatus = 'loading' | 'online' | 'offline' | 'unconfigured';
@@ -18,7 +18,7 @@ export function useVault(): VaultState {
   const loading = useRef(false);
 
   const refresh = useCallback(async () => {
-    if (!isConfigured()) {
+    if (!loadConnection()) {
       setStatus('unconfigured');
       return;
     }
@@ -49,12 +49,13 @@ export function useVault(): VaultState {
 
   useEffect(() => {
     refresh();
-    if (!isConfigured()) return;
+    if (!loadConnection()) return;
 
-    const channel = supabase
+    const channel = getClient()
       .channel('vault-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'entries' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creators' }, () => refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'secure_notes' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activity' }, () => refresh())
       .subscribe();
 
@@ -62,7 +63,7 @@ export function useVault(): VaultState {
     const poll = setInterval(refresh, 60_000);
 
     return () => {
-      supabase.removeChannel(channel);
+      getClient().removeChannel(channel);
       clearInterval(poll);
     };
   }, [refresh]);

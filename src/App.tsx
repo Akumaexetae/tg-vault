@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from './components/CommandPalette';
+import { ConnectScreen } from './components/ConnectScreen';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { EntryModal } from './components/EntryModal';
 import { IdentityScreen } from './components/IdentityScreen';
@@ -18,6 +19,8 @@ import {
   updateEntry,
 } from './lib/queries';
 import { entryLabel, filterEntries } from './lib/search';
+import { clearConnection, loadConnection } from './lib/settings';
+import { resetClient } from './lib/supabase';
 import type { Creator, Entry, EntryInput, SecureNote, User } from './lib/types';
 import { ActivityView } from './views/ActivityView';
 import { DashboardView } from './views/DashboardView';
@@ -45,10 +48,23 @@ const CREATOR_COLORS = [
 ];
 
 export function App() {
+  const [connected, setConnected] = useState(() => loadConnection() !== null);
   const [user, setUser] = useState<User | null>(() => {
     const stored = localStorage.getItem('tg-vault-user');
     return stored === 'Tyler' || stored === 'Gabriel' ? stored : null;
   });
+
+  // First launch: point this PC at the vault, then say who's using it.
+  if (!connected) {
+    return (
+      <ConnectScreen
+        onConnected={() => {
+          resetClient();
+          setConnected(true);
+        }}
+      />
+    );
+  }
 
   if (!user) {
     return (
@@ -63,12 +79,25 @@ export function App() {
 
   return (
     <ToastProvider>
-      <VaultApp user={user} />
+      <VaultApp
+        user={user}
+        onDisconnect={() => {
+          clearConnection();
+          resetClient();
+          setConnected(false);
+        }}
+      />
     </ToastProvider>
   );
 }
 
-function VaultApp({ user }: { user: User }) {
+function VaultApp({
+  user,
+  onDisconnect,
+}: {
+  user: User;
+  onDisconnect: () => void;
+}) {
   const { data, status, refresh } = useVault();
   const toast = useToast();
   const [route, setRoute] = useState<Route>({ view: 'dashboard' });
@@ -108,20 +137,8 @@ function VaultApp({ user }: { user: User }) {
   }, []);
 
   if (status === 'unconfigured') {
-    return (
-      <div className="identity-screen">
-        <div className="identity-card setup-card">
-          <div className="identity-logo">T&amp;G Vault</div>
-          <p className="identity-sub">Almost there — the vault isn't connected yet.</p>
-          <ol className="setup-steps">
-            <li>Create a free project at <strong>supabase.com</strong></li>
-            <li>Run <code>supabase/schema.sql</code> in its SQL editor</li>
-            <li>Paste the project URL + anon key into <code>src/config.ts</code></li>
-            <li>Rebuild the app</li>
-          </ol>
-        </div>
-      </div>
-    );
+    onDisconnect();
+    return null;
   }
 
   if (status === 'loading' || !data) {
@@ -414,6 +431,13 @@ function VaultApp({ user }: { user: User }) {
           <div className="sidebar-user">
             <span className={`activity-avatar avatar-${user.toLowerCase()}`}>{user[0]}</span>
             {user}
+            <button
+              className="icon-btn sidebar-disconnect"
+              title="Disconnect this PC from the vault"
+              onClick={onDisconnect}
+            >
+              ⏻
+            </button>
           </div>
         </div>
       </aside>
