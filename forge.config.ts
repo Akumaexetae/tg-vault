@@ -25,7 +25,7 @@ const config: ForgeConfig = {
     {
       name: '@electron-forge/publisher-github',
       config: {
-        repository: { owner: 'TG-AGENCY', name: 'tg-vault' },
+        repository: { owner: 'Akumaexetae', name: 'tg-vault' },
         prerelease: false,
       },
     },

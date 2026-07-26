@@ -39,14 +39,18 @@ RLS is disabled with permissive policies as a fallback — a deliberate choice f
 
 `updateElectronApp()` in `src/main.ts` checks GitHub releases hourly (packaged builds only; it no-ops in dev and stays quiet if the repo isn't set up).
 
-One-time setup:
+Releases live in the private repo `Akumaexetae/tg-vault`.
 
-1. Create a **private** GitHub repo `TG-AGENCY/tg-vault` (or edit the owner/name in `forge.config.ts`).
-2. `git remote add origin …` and push.
-3. Create a classic token with `repo` scope, then `export GITHUB_TOKEN=…`.
-4. `npm version patch && npm run publish` — this uploads a new release.
+To ship an update to both installs:
 
-Both installs pick it up within the hour and update on next launch. Until this is set up, ship new versions by re-running `npm run make` and sending the installer.
+```bash
+npm version patch
+GITHUB_TOKEN=<token with repo scope> npm run publish
+```
+
+Both installs pick it up within the hour and apply it on next launch — no more emailing installers. Gabriel still needs the *first* install by hand.
+
+Note: `update-electron-app` reads releases from the repo, so the token used to publish must have `repo` scope on this private repo.
 
 ## Notes
 
