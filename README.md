@@ -33,13 +33,13 @@ Supabase project `bwzrtosxnlxeqpnbwjjq`. Run in the SQL editor, in order:
 1. `supabase/schema.sql` — creators, entries, activity
 2. `supabase/migration-002.sql` — pinned, history, proxy, secure_notes
 
-RLS is disabled with permissive policies as a fallback — a deliberate choice for a private two-person tool. Credentials live in `src/config.ts` and are baked into the build, so changing them means rebuilding both installs.
+RLS is disabled with permissive policies — a deliberate choice for a two-person tool with no logins. **This means the publishable key is effectively a master key to the vault**, despite Supabase's UI describing publishable keys as safe to share; that guidance assumes RLS is on.
+
+Consequently the connection is **not** stored in this repository. Each install asks for the vault URL and key on first launch and keeps them in `localStorage`, so the published binary contains no secret and this repo can safely be public. Don't reintroduce a compiled-in key.
 
 ## Auto-update
 
 The app reads `https://github.com/Akumaexetae/tg-vault/releases/latest/download/` directly — Squirrel fetches `RELEASES` and the `.nupkg` from there. No third-party update server. Checks on launch and hourly; when an update downloads, a banner offers a restart.
-
-Releases live in the private repo `Akumaexetae/tg-vault`.
 
 To ship an update to both installs:
 
