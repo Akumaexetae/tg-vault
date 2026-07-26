@@ -1832,6 +1832,196 @@ h2 {
   height: 10px;
 }
 
+/* --- Planning canvas ----------------------------------------------------- */
+.planning-switch {
+  padding: 8px 22px 0;
+}
+.planning-tabs {
+  display: flex;
+  gap: 4px;
+}
+.canvas-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 10px 22px 16px;
+}
+
+.canvas-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 0;
+  padding: 8px 10px;
+  flex-wrap: wrap;
+}
+.canvas-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 3px;
+}
+.canvas-toolbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.canvas-zoom {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  min-width: 42px;
+  text-align: right;
+}
+.canvas-who {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.canvas-colors {
+  display: flex;
+  gap: 4px;
+}
+.canvas-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  padding: 0;
+}
+.canvas-swatch-on {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.canvas-surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #fbfdff;
+  background-image: radial-gradient(rgba(0, 100, 150, 0.16) 1px, transparent 1px);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  cursor: default;
+  touch-action: none;
+}
+.canvas-panning {
+  cursor: grabbing;
+}
+.canvas-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--ink-soft);
+}
+
+.canvas-object {
+  position: absolute;
+  display: flex;
+  padding: 8px 10px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.canvas-note {
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.18);
+}
+.canvas-box {
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.canvas-text {
+  font-weight: 700;
+}
+.canvas-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.canvas-object-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.35;
+  width: 100%;
+}
+.canvas-placeholder {
+  color: rgba(0, 0, 0, 0.35);
+  font-style: normal;
+}
+.canvas-text-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+}
+.canvas-resize {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid #fff;
+  cursor: nwse-resize;
+}
+
+.canvas-arrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.canvas-arrow-handle {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 2;
+  pointer-events: all;
+  cursor: grab;
+}
+
+.canvas-cursor {
+  position: absolute;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+  transform: translate(-2px, -2px);
+  transition: left 0.06s linear, top 0.06s linear;
+  z-index: 20;
+}
+.canvas-cursor-name {
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-top: 10px;
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

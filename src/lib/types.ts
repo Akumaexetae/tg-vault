@@ -141,6 +141,35 @@ export interface SecureNote {
   updated_by: User;
 }
 
+export interface Canvas {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  updated_by: User;
+}
+
+export type CanvasObjectKind = 'note' | 'text' | 'box' | 'arrow';
+
+export interface CanvasObject {
+  id: string;
+  canvas_id: string;
+  kind: CanvasObjectKind;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Arrows only: the far endpoint. Other kinds use w/h. */
+  x2: number | null;
+  y2: number | null;
+  text: string;
+  color: string;
+  z: number;
+  created_at: string;
+  updated_at: string;
+  updated_by: User;
+}
+
 export type Lane = 'todo' | 'doing' | 'done';
 
 export interface BoardCard {

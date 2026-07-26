@@ -7,6 +7,8 @@ import type {
   CreatorEarning,
   CreatorInput,
   BoardCard,
+  Canvas,
+  CanvasObject,
   Lane,
   Entry,
   EntryInput,
@@ -293,6 +295,93 @@ export async function deleteDocument(
   const { error } = await getClient().from('creator_documents').delete().eq('id', id);
   if (error) throw asError(error);
   await logActivity(who, 'deleted', `document “${label}”`);
+}
+
+// --- Planning canvas -------------------------------------------------------
+export async function fetchCanvases(): Promise<Canvas[]> {
+  const { data, error } = await getClient()
+    .from('canvases')
+    .select('*')
+    .order('created_at');
+  if (error) throw asError(error);
+  return data as Canvas[];
+}
+
+export async function fetchCanvasObjects(canvasId: string): Promise<CanvasObject[]> {
+  const { data, error } = await getClient()
+    .from('canvas_objects')
+    .select('*')
+    .eq('canvas_id', canvasId)
+    .order('z');
+  if (error) throw asError(error);
+  return data as CanvasObject[];
+}
+
+export async function createCanvas(name: string, who: User): Promise<Canvas> {
+  const { data, error } = await getClient()
+    .from('canvases')
+    .insert({ name, updated_by: who })
+    .select()
+    .single();
+  if (error) throw asError(error);
+  await logActivity(who, 'created', `canvas “${name}”`);
+  return data as Canvas;
+}
+
+export async function renameCanvas(
+  id: string,
+  name: string,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('canvases')
+    .update({ name, updated_by: who, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw asError(error);
+}
+
+export async function deleteCanvas(
+  id: string,
+  who: User,
+  name: string,
+): Promise<void> {
+  const { error } = await getClient().from('canvases').delete().eq('id', id);
+  if (error) throw asError(error);
+  await logActivity(who, 'deleted', `canvas “${name}”`);
+}
+
+export async function createObject(
+  object: Omit<CanvasObject, 'id' | 'created_at' | 'updated_at' | 'updated_by'>,
+  who: User,
+): Promise<CanvasObject> {
+  const { data, error } = await getClient()
+    .from('canvas_objects')
+    .insert({ ...object, updated_by: who })
+    .select()
+    .single();
+  if (error) throw asError(error);
+  return data as CanvasObject;
+}
+
+/**
+ * Object edits are frequent (every drag end, every keystroke settle) and are
+ * deliberately kept out of the activity feed — the canvas is a scratchpad.
+ */
+export async function updateObject(
+  id: string,
+  patch: Partial<CanvasObject>,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('canvas_objects')
+    .update({ ...patch, updated_by: who, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw asError(error);
+}
+
+export async function deleteObject(id: string): Promise<void> {
+  const { error } = await getClient().from('canvas_objects').delete().eq('id', id);
+  if (error) throw asError(error);
 }
 
 // --- Planning board --------------------------------------------------------

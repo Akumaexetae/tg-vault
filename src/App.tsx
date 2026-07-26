@@ -62,6 +62,7 @@ import { ImportModal } from './views/money/ImportModal';
 import { MoneyView } from './views/money/MoneyView';
 import { BoardView } from './views/planning/BoardView';
 import { CardModal, type CardInput } from './views/planning/CardModal';
+import { CanvasView } from './views/planning/CanvasView';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
 import { CreatorModal, toInput } from './views/dossier/CreatorModal';
@@ -162,6 +163,7 @@ function VaultApp({
   const [pendingDocDelete, setPendingDocDelete] = useState<CreatorDocument | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [cardModal, setCardModal] = useState<BoardCard | { lane: Lane } | null>(null);
+  const [planningTab, setPlanningTab] = useState<'board' | 'canvas'>('board');
   // Sidebar groups remember their open/closed state per install.
   const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean }>(
     () => {
@@ -549,15 +551,40 @@ function VaultApp({
       />
     );
   } else if (route.view === 'planning') {
-    content = (
-      <BoardView
-        data={data}
-        readOnly={readOnly}
-        onAdd={(lane) => setCardModal({ lane })}
-        onEdit={setCardModal}
-        onMove={handleMoveCard}
-      />
+    const tabs = (
+      <div className="planning-tabs">
+        <button
+          className={`btn btn-tiny ${planningTab === 'board' ? 'btn-primary' : ''}`}
+          onClick={() => setPlanningTab('board')}
+        >
+          Board
+        </button>
+        <button
+          className={`btn btn-tiny ${planningTab === 'canvas' ? 'btn-primary' : ''}`}
+          onClick={() => setPlanningTab('canvas')}
+        >
+          Canvas
+        </button>
+      </div>
     );
+    content =
+      planningTab === 'board' ? (
+        <>
+          <div className="planning-switch">{tabs}</div>
+          <BoardView
+            data={data}
+            readOnly={readOnly}
+            onAdd={(lane) => setCardModal({ lane })}
+            onEdit={setCardModal}
+            onMove={handleMoveCard}
+          />
+        </>
+      ) : (
+        <div className="canvas-page">
+          <div className="planning-switch">{tabs}</div>
+          <CanvasView user={user} readOnly={readOnly} onToast={toast} />
+        </div>
+      );
   } else if (route.view === 'creators') {
     content = (
       <CreatorsView
