@@ -23,6 +23,23 @@ export function filterEntries(
   );
 }
 
+/**
+ * Creator match for global search.
+ *
+ * Payout details and ID references are deliberately excluded — a bank account
+ * should not surface from a stray keystroke (spec §5).
+ */
+export function matchesCreator(creator: Creator, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    creator.name,
+    creator.legal_name ?? '',
+    creator.email ?? '',
+    creator.telegram ?? '',
+  ].some((field) => field.toLowerCase().includes(q));
+}
+
 /** "Bella's OnlyFans" — used for activity log labels. */
 export function entryLabel(
   entry: Pick<Entry, 'service_name' | 'creator_id' | 'username'>,

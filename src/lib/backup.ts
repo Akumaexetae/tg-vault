@@ -35,5 +35,27 @@ export function buildCsv(data: VaultData): string {
   return [header.join(','), ...rows].join('\r\n');
 }
 
+/**
+ * Creator sheet for the CSV export.
+ *
+ * Payout details are deliberately omitted — a spreadsheet in Downloads is the
+ * wrong home for bank details. The JSON backup has them if you need a full
+ * restore (spec §6).
+ */
+export function buildCreatorsCsv(data: VaultData): string {
+  const header = [
+    'Stage name', 'Legal name', 'Status', 'Share %',
+    'Contract', 'Payout method', 'Currency', 'Start date',
+  ];
+  const rows = data.creators.map((c) =>
+    [
+      c.name, c.legal_name ?? '', c.status, c.revenue_share ?? '',
+      c.contract_status, c.payout_method ?? '', c.payout_currency ?? '',
+      c.start_date ?? '',
+    ].map(csvCell).join(','),
+  );
+  return [header.join(','), ...rows].join('\r\n');
+}
+
 export const backupFilename = (iso: string, ext: 'json' | 'csv'): string =>
   `tg-vault-backup-${iso.slice(0, 10)}.${ext}`;

@@ -1,7 +1,11 @@
+import { changedFieldNames } from './creators/activity';
 import { getClient } from './supabase';
 import type {
   Activity,
   Creator,
+  CreatorDocument,
+  CreatorEarning,
+  CreatorInput,
   Entry,
   EntryInput,
   PasswordChange,
@@ -13,10 +17,12 @@ import type {
 const HISTORY_LIMIT = 10;
 
 export async function fetchAll(): Promise<VaultData> {
-  const [creators, entries, notes, activity] = await Promise.all([
+  const [creators, entries, notes, documents, earnings, activity] = await Promise.all([
     getClient().from('creators').select('*').order('name'),
     getClient().from('entries').select('*').order('service_name'),
     getClient().from('secure_notes').select('*').order('title'),
+    getClient().from('creator_documents').select('*').order('created_at'),
+    getClient().from('creator_earnings').select('*').order('month'),
     getClient()
       .from('activity')
       .select('*')
@@ -26,11 +32,15 @@ export async function fetchAll(): Promise<VaultData> {
   if (creators.error) throw creators.error;
   if (entries.error) throw entries.error;
   if (notes.error) throw notes.error;
+  if (documents.error) throw documents.error;
+  if (earnings.error) throw earnings.error;
   if (activity.error) throw activity.error;
   return {
     creators: creators.data as Creator[],
     entries: entries.data as Entry[],
     notes: notes.data as SecureNote[],
+    documents: documents.data as CreatorDocument[],
+    earnings: earnings.data as CreatorEarning[],
     activity: activity.data as Activity[],
   };
 }
@@ -115,6 +125,127 @@ export async function createCreator(
     .single();
   if (error) throw error;
   return data as Creator;
+}
+
+// --- Creator dossiers ------------------------------------------------------
+export async function createCreatorFull(
+  input: CreatorInput,
+  who: User,
+): Promise<Creator> {
+  const { data, error } = await getClient()
+    .from('creators')
+    .insert({ ...input, updated_by: who })
+    .select()
+    .single();
+  if (error) throw error;
+  await logActivity(who, 'created', `creator ${input.name}`);
+  return data as Creator;
+}
+
+export async function updateCreator(
+  before: Creator,
+  input: CreatorInput,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('creators')
+    .update({ ...input, updated_by: who, updated_at: new Date().toISOString() })
+    .eq('id', before.id);
+  if (error) throw error;
+  const fields = changedFieldNames(before, input);
+  if (fields.length > 0) {
+    // Field NAMES only — values must never reach the activity feed.
+    await logActivity(who, 'updated', `${input.name}'s ${fields.join(', ')}`);
+  }
+}
+
+/** A reason this creator can't be deleted, or null if she can be. */
+export function canDeleteCreator(id: string, data: VaultData): string | null {
+  const logins = data.entries.filter((e) => e.creator_id === id).length;
+  const docs = data.documents.filter((d) => d.creator_id === id).length;
+  const months = data.earnings.filter((e) => e.creator_id === id).length;
+  const held = [
+    logins && `${logins} login${logins === 1 ? '' : 's'}`,
+    docs && `${docs} document${docs === 1 ? '' : 's'}`,
+    months && `${months} month${months === 1 ? '' : 's'} of earnings`,
+  ].filter(Boolean);
+  if (held.length === 0) return null;
+  return `Still holds ${held.join(', ')}. Archive instead to keep the history.`;
+}
+
+export async function deleteCreator(
+  id: string,
+  who: User,
+  name: string,
+): Promise<void> {
+  const { error } = await getClient().from('creators').delete().eq('id', id);
+  if (error) throw error;
+  await logActivity(who, 'deleted', `creator ${name}`);
+}
+
+export async function uploadDocumentFile(
+  file: File,
+  creatorId: string,
+): Promise<string> {
+  const path = `${creatorId}/${Date.now()}-${file.name}`;
+  const { error } = await getClient().storage.from('documents').upload(path, file);
+  if (error) throw error;
+  return path;
+}
+
+export async function documentUrl(doc: CreatorDocument): Promise<string | null> {
+  if (doc.url) return doc.url;
+  if (!doc.storage_path) return null;
+  const { data, error } = await getClient()
+    .storage.from('documents')
+    .createSignedUrl(doc.storage_path, 60 * 5);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function saveDocument(
+  doc: {
+    creator_id: string;
+    label: string;
+    kind: CreatorDocument['kind'];
+    url: string | null;
+    storage_path: string | null;
+    size_bytes: number | null;
+  },
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('creator_documents')
+    .insert({ ...doc, updated_by: who });
+  if (error) throw error;
+  await logActivity(who, 'created', `document “${doc.label}”`);
+}
+
+export async function deleteDocument(
+  id: string,
+  who: User,
+  label: string,
+): Promise<void> {
+  const { error } = await getClient().from('creator_documents').delete().eq('id', id);
+  if (error) throw error;
+  await logActivity(who, 'deleted', `document “${label}”`);
+}
+
+export async function saveEarning(
+  creatorId: string,
+  month: string,
+  gross: number,
+  currency: string,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('creator_earnings')
+    .upsert(
+      { creator_id: creatorId, month, gross, currency, updated_by: who },
+      { onConflict: 'creator_id,month' },
+    );
+  if (error) throw error;
+  await logActivity(who, 'updated', `earnings for ${month.slice(0, 7)}`);
 }
 
 // --- Secure notes ----------------------------------------------------------

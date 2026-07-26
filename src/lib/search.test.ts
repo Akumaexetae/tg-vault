@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { entryLabel, filterEntries, matchesQuery } from './search';
+import { entryLabel, filterEntries, matchesCreator, matchesQuery } from './search';
+import { makeCreator } from './creators/fixtures';
 import type { Creator, Entry } from './types';
 
 const creators: Creator[] = [
-  { id: 'c1', name: 'Bella', color: '#f0a' },
-  { id: 'c2', name: 'Agency', color: '#00AFF0' },
+  makeCreator({ id: 'c1', name: 'Bella', color: '#f0a' }),
+  makeCreator({ id: 'c2', name: 'Agency', color: '#00AFF0', kind: 'agency' }),
 ];
 
 const entry = (over: Partial<Entry>): Entry => ({
@@ -47,6 +48,33 @@ describe('filterEntries', () => {
   it('filters by creator name via the creator list', () => {
     const list = [entry({}), entry({ id: 'e2', creator_id: 'c2', username: 'tools@tg.com' })];
     expect(filterEntries(list, creators, 'agency').map((e) => e.id)).toEqual(['e2']);
+  });
+});
+
+describe('matchesCreator', () => {
+  const bella = makeCreator({
+    legal_name: 'Isabella Moreau',
+    email: 'bella@mail.com',
+    telegram: '@bella_x',
+    payout_details: 'FR76 3000 SECRET',
+    id_reference: 'FR passport 998877',
+  });
+
+  it('matches stage name, legal name, email and Telegram', () => {
+    expect(matchesCreator(bella, 'bella')).toBe(true);
+    expect(matchesCreator(bella, 'moreau')).toBe(true);
+    expect(matchesCreator(bella, 'bella@mail')).toBe(true);
+    expect(matchesCreator(bella, '@bella_x')).toBe(true);
+  });
+
+  it('never matches payout details or ID references', () => {
+    expect(matchesCreator(bella, 'SECRET')).toBe(false);
+    expect(matchesCreator(bella, 'FR76')).toBe(false);
+    expect(matchesCreator(bella, '998877')).toBe(false);
+  });
+
+  it('matches everything on an empty query', () => {
+    expect(matchesCreator(bella, '  ')).toBe(true);
   });
 });
 

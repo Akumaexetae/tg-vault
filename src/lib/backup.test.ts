@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { backupFilename, buildBackup, buildCsv } from './backup';
+import { backupFilename, buildBackup, buildCreatorsCsv, buildCsv } from './backup';
+import { makeCreator } from './creators/fixtures';
 import type { Entry, VaultData } from './types';
 
 const entry = (over: Partial<Entry>): Entry => ({
@@ -24,9 +25,19 @@ const entry = (over: Partial<Entry>): Entry => ({
 });
 
 const data: VaultData = {
-  creators: [{ id: 'c1', name: 'Bella', color: '#f0a' }],
+  creators: [
+    makeCreator({
+      legal_name: 'Isabella Moreau',
+      payout_method: 'iban',
+      payout_details: 'FR76 3000 6000 0112',
+      payout_currency: 'EUR',
+      contract_status: 'signed',
+    }),
+  ],
   entries: [entry({})],
   notes: [],
+  documents: [],
+  earnings: [],
   activity: [],
 };
 
@@ -36,6 +47,12 @@ describe('buildBackup', () => {
     expect(backup.app).toBe('T&G Vault');
     expect(backup.version).toBe(1);
     expect(backup.data.entries).toHaveLength(1);
+  });
+
+  it('includes documents and earnings so the snapshot stays complete', () => {
+    const backup = buildBackup(data, '2026-07-26T10:00:00Z');
+    expect(backup.data).toHaveProperty('documents');
+    expect(backup.data).toHaveProperty('earnings');
   });
 });
 
@@ -47,11 +64,20 @@ describe('buildCsv', () => {
   });
 
   it('quotes cells containing commas or quotes', () => {
-    const tricky = {
-      ...data,
-      entries: [entry({ notes: 'a,b "quoted"' })],
-    };
+    const tricky = { ...data, entries: [entry({ notes: 'a,b "quoted"' })] };
     expect(buildCsv(tricky)).toContain('"a,b ""quoted"""');
+  });
+});
+
+describe('buildCreatorsCsv', () => {
+  it('lists creators with their commercial terms', () => {
+    const lines = buildCreatorsCsv(data).split('\r\n');
+    expect(lines[0]).toContain('Stage name,Legal name,Status,Share %');
+    expect(lines[1]).toContain('Bella,Isabella Moreau,active,45');
+  });
+
+  it('never includes payout details', () => {
+    expect(buildCreatorsCsv(data)).not.toContain('FR76');
   });
 });
 
