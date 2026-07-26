@@ -22,6 +22,9 @@ const earning = (
   gross,
   currency,
   notes: null,
+  paid_at: null,
+  paid_by: null,
+  paid_reference: null,
   created_at: month,
   updated_by: 'Tyler',
 });

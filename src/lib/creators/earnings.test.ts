@@ -9,6 +9,9 @@ const earning = (month: string, gross: number): CreatorEarning => ({
   gross,
   currency: 'EUR',
   notes: null,
+  paid_at: null,
+  paid_by: null,
+  paid_reference: null,
   created_at: month,
   updated_by: 'Tyler',
 });

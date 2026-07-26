@@ -84,6 +84,10 @@ export interface CreatorEarning {
   gross: number;
   currency: string;
   notes: string | null;
+  /** When the creator was actually paid for this month; null = still owed. */
+  paid_at: string | null;
+  paid_by: User | null;
+  paid_reference: string | null;
   created_at: string;
   updated_by: User;
 }

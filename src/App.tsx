@@ -24,6 +24,8 @@ import {
   documentUrl,
   saveDocument,
   saveEarning,
+  saveEarnings,
+  setEarningPaid,
   saveNote,
   setPinned,
   updateCreator,
@@ -38,6 +40,7 @@ import { resetClient } from './lib/supabase';
 import type {
   Creator,
   CreatorDocument,
+  CreatorEarning,
   CreatorInput,
   Entry,
   EntryInput,
@@ -48,6 +51,8 @@ import { ActivityView } from './views/ActivityView';
 import { CreatorsView } from './views/CreatorsView';
 import { EntryListView } from './views/EntryListView';
 import { HomeView } from './views/HomeView';
+import { ImportModal } from './views/money/ImportModal';
+import { MoneyView } from './views/money/MoneyView';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
 import { CreatorModal, toInput } from './views/dossier/CreatorModal';
@@ -59,6 +64,7 @@ import { sortCreators } from './lib/creators/sort';
 type Route =
   | { view: 'dashboard' }
   | { view: 'creators' }
+  | { view: 'money' }
   | { view: 'all' }
   | { view: 'notes' }
   | { view: 'health' }
@@ -143,6 +149,7 @@ function VaultApp({
   const [earningsFor, setEarningsFor] = useState<Creator | null>(null);
   const [pendingCreatorDelete, setPendingCreatorDelete] = useState<Creator | null>(null);
   const [pendingDocDelete, setPendingDocDelete] = useState<CreatorDocument | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   // Sidebar groups remember their open/closed state per install.
   const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean }>(
     () => {
@@ -395,6 +402,36 @@ function VaultApp({
     }
   };
 
+  const handleTogglePaid = async (
+    earning: CreatorEarning,
+    creator: Creator,
+    paid: boolean,
+  ) => {
+    try {
+      await setEarningPaid(
+        earning.id,
+        paid,
+        user,
+        null,
+        `${creator.name} ${earning.month.slice(0, 7)}`,
+      );
+      await refresh();
+      toast(paid ? 'Marked paid' : 'Marked unpaid');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not update', 'error');
+    }
+  };
+
+  const handleImportStatement = async (
+    creatorId: string,
+    rows: { month: string; gross: number }[],
+    currency: string,
+  ) => {
+    await saveEarnings(creatorId, rows, currency, user);
+    await refresh();
+    toast(`Imported ${rows.length} month${rows.length === 1 ? '' : 's'}`);
+  };
+
   const handleSaveEarnings = async (
     creator: Creator,
     month: string,
@@ -439,6 +476,20 @@ function VaultApp({
         }}
         onOpenHealth={() => setRoute({ view: 'health' })}
         onRecordEarnings={setEarningsFor}
+      />
+    );
+  } else if (route.view === 'money') {
+    content = (
+      <MoneyView
+        data={data}
+        readOnly={readOnly}
+        onImport={() => setImportOpen(true)}
+        onRecord={setEarningsFor}
+        onTogglePaid={handleTogglePaid}
+        onOpenCreator={(c) => {
+          setCreatorTab('overview');
+          setRoute({ view: 'creator', id: c.id });
+        }}
       />
     );
   } else if (route.view === 'creators') {
@@ -620,6 +671,7 @@ function VaultApp({
 
         <nav className="sidebar-nav">
           {navItem('Home', { view: 'dashboard' }, on('dashboard'))}
+          {navItem('Money', { view: 'money' }, on('money'))}
 
           <NavGroup
             label="Creators"
@@ -838,6 +890,14 @@ function VaultApp({
               : undefined
           }
           onClose={() => setCreatorModal(null)}
+        />
+      )}
+
+      {importOpen && (
+        <ImportModal
+          creators={creators}
+          onImport={handleImportStatement}
+          onClose={() => setImportOpen(false)}
         />
       )}
 

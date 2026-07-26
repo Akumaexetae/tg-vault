@@ -290,6 +290,52 @@ export async function deleteDocument(
   await logActivity(who, 'deleted', `document “${label}”`);
 }
 
+export async function setEarningPaid(
+  id: string,
+  paid: boolean,
+  who: User,
+  reference: string | null,
+  label: string,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('creator_earnings')
+    .update(
+      paid
+        ? { paid_at: new Date().toISOString(), paid_by: who, paid_reference: reference }
+        : { paid_at: null, paid_by: null, paid_reference: null },
+    )
+    .eq('id', id);
+  if (error) throw asError(error);
+  await logActivity(who, 'updated', `${label} marked ${paid ? 'paid' : 'unpaid'}`);
+}
+
+/** Bulk upsert used by the statement importer. */
+export async function saveEarnings(
+  creatorId: string,
+  months: { month: string; gross: number }[],
+  currency: string,
+  who: User,
+): Promise<void> {
+  const { error } = await getClient()
+    .from('creator_earnings')
+    .upsert(
+      months.map((m) => ({
+        creator_id: creatorId,
+        month: m.month,
+        gross: m.gross,
+        currency,
+        updated_by: who,
+      })),
+      { onConflict: 'creator_id,month' },
+    );
+  if (error) throw asError(error);
+  await logActivity(
+    who,
+    'updated',
+    `${months.length} month${months.length === 1 ? '' : 's'} of earnings imported`,
+  );
+}
+
 export async function saveEarning(
   creatorId: string,
   month: string,
