@@ -16,6 +16,27 @@ import type {
 
 const HISTORY_LIMIT = 10;
 
+/**
+ * Supabase rejects with plain `{message, code, hint}` objects, not Errors, so
+ * `e instanceof Error` in the UI silently fell through to a generic "are you
+ * online?". Normalise here and the real reason reaches the user.
+ */
+function asError(error: {
+  message: string;
+  code?: string;
+  hint?: string | null;
+}): Error {
+  const missingColumn = /column .* does not exist/i.test(error.message);
+  const missingTable = /relation .* does not exist/i.test(error.message);
+  if (missingColumn || missingTable) {
+    return new Error(
+      `${error.message} — the database is missing a migration. Run the latest ` +
+        `supabase/migration-*.sql in the Supabase SQL editor.`,
+    );
+  }
+  return new Error(error.hint ? `${error.message} (${error.hint})` : error.message);
+}
+
 export async function fetchAll(): Promise<VaultData> {
   const [creators, entries, notes, documents, earnings, activity] = await Promise.all([
     getClient().from('creators').select('*').order('name'),
@@ -29,12 +50,12 @@ export async function fetchAll(): Promise<VaultData> {
       .order('created_at', { ascending: false })
       .limit(200),
   ]);
-  if (creators.error) throw creators.error;
-  if (entries.error) throw entries.error;
-  if (notes.error) throw notes.error;
-  if (documents.error) throw documents.error;
-  if (earnings.error) throw earnings.error;
-  if (activity.error) throw activity.error;
+  if (creators.error) throw asError(creators.error);
+  if (entries.error) throw asError(entries.error);
+  if (notes.error) throw asError(notes.error);
+  if (documents.error) throw asError(documents.error);
+  if (earnings.error) throw asError(earnings.error);
+  if (activity.error) throw asError(activity.error);
   return {
     creators: creators.data as Creator[],
     entries: entries.data as Entry[],
@@ -63,7 +84,7 @@ export async function createEntry(
   const { error } = await getClient()
     .from('entries')
     .insert({ ...input, updated_by: who });
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'created', label);
 }
 
@@ -95,13 +116,13 @@ export async function updateEntry(
       updated_at: new Date().toISOString(),
     })
     .eq('id', previous.id);
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'updated', label);
 }
 
 export async function setPinned(id: string, pinned: boolean): Promise<void> {
   const { error } = await getClient().from('entries').update({ pinned }).eq('id', id);
-  if (error) throw error;
+  if (error) throw asError(error);
 }
 
 export async function deleteEntry(
@@ -110,7 +131,7 @@ export async function deleteEntry(
   label: string,
 ): Promise<void> {
   const { error } = await getClient().from('entries').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'deleted', label);
 }
 
@@ -123,7 +144,7 @@ export async function createCreator(
     .insert({ name, color })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw asError(error);
   return data as Creator;
 }
 
@@ -137,7 +158,7 @@ export async function createCreatorFull(
     .insert({ ...input, updated_by: who })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'created', `creator ${input.name}`);
   return data as Creator;
 }
@@ -151,7 +172,7 @@ export async function updateCreator(
     .from('creators')
     .update({ ...input, updated_by: who, updated_at: new Date().toISOString() })
     .eq('id', before.id);
-  if (error) throw error;
+  if (error) throw asError(error);
   const fields = changedFieldNames(before, input);
   if (fields.length > 0) {
     // Field NAMES only — values must never reach the activity feed.
@@ -179,7 +200,7 @@ export async function deleteCreator(
   name: string,
 ): Promise<void> {
   const { error } = await getClient().from('creators').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'deleted', `creator ${name}`);
 }
 
@@ -237,7 +258,7 @@ export async function documentUrl(doc: CreatorDocument): Promise<string | null> 
   const { data, error } = await getClient()
     .storage.from('documents')
     .createSignedUrl(doc.storage_path, 60 * 5);
-  if (error) throw error;
+  if (error) throw asError(error);
   return data.signedUrl;
 }
 
@@ -255,7 +276,7 @@ export async function saveDocument(
   const { error } = await getClient()
     .from('creator_documents')
     .insert({ ...doc, updated_by: who });
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'created', `document “${doc.label}”`);
 }
 
@@ -265,7 +286,7 @@ export async function deleteDocument(
   label: string,
 ): Promise<void> {
   const { error } = await getClient().from('creator_documents').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'deleted', `document “${label}”`);
 }
 
@@ -282,7 +303,7 @@ export async function saveEarning(
       { creator_id: creatorId, month, gross, currency, updated_by: who },
       { onConflict: 'creator_id,month' },
     );
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'updated', `earnings for ${month.slice(0, 7)}`);
 }
 
@@ -302,7 +323,7 @@ export async function saveNote(
         updated_at: new Date().toISOString(),
       })
       .eq('id', note.id);
-    if (error) throw error;
+    if (error) throw asError(error);
     await logActivity(who, 'updated', `note “${note.title}”`);
   } else {
     const { error } = await getClient().from('secure_notes').insert({
@@ -311,7 +332,7 @@ export async function saveNote(
       creator_id: note.creator_id,
       updated_by: who,
     });
-    if (error) throw error;
+    if (error) throw asError(error);
     await logActivity(who, 'created', `note “${note.title}”`);
   }
 }
@@ -322,6 +343,6 @@ export async function deleteNote(
   title: string,
 ): Promise<void> {
   const { error } = await getClient().from('secure_notes').delete().eq('id', id);
-  if (error) throw error;
+  if (error) throw asError(error);
   await logActivity(who, 'deleted', `note “${title}”`);
 }
