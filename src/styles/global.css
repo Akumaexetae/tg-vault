@@ -82,12 +82,21 @@ h2 {
 }
 
 .nav-section {
+  display: flex;
+  align-items: center;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
   padding: 16px 10px 6px;
+}
+.nav-section-add {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .nav-item {
@@ -1026,6 +1035,247 @@ h2 {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* --- Creator dossier ----------------------------------------------------- */
+.dossier-hero {
+  background: linear-gradient(115deg, #00aff0 0%, #0090c9 50%, #7d3ba8 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  box-shadow: 0 3px 14px rgba(0, 120, 180, 0.25);
+  padding: 16px 18px;
+  display: flex;
+  gap: 18px;
+  position: relative;
+}
+.dossier-hero-wide {
+  align-items: center;
+  margin-bottom: 12px;
+}
+.dossier-hero-tall {
+  flex-direction: column;
+  align-items: flex-start;
+  grid-row: span 2;
+}
+.dossier-hero-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.dossier-hero-text {
+  min-width: 0;
+}
+.dossier-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.dossier-hero-name {
+  font-size: 19px;
+  font-weight: 800;
+}
+.dossier-hero-sub {
+  font-size: 12px;
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dossier-hero-stats {
+  display: flex;
+  gap: 22px;
+  padding-right: 76px;
+}
+.dossier-hero-tall .dossier-hero-stats {
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 0;
+}
+.dossier-stat b {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.dossier-stat span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  opacity: 0.85;
+}
+.dossier-stat-hint {
+  display: block;
+  font-size: 9px;
+  opacity: 0.75;
+  font-style: normal;
+}
+.dossier-badge {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 99px;
+  padding: 3px 11px;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.dossier-grid-wide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.dossier-grid-tall {
+  display: grid;
+  grid-template-columns: 230px 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.layout-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.tile {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+.tile-btn {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.tile-btn:hover {
+  border-color: var(--accent);
+}
+.tile-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.tile-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+  margin-bottom: 5px;
+}
+.tile-label-spaced {
+  margin-top: 12px;
+}
+.tile-value {
+  font-weight: 700;
+  font-size: 13px;
+}
+.tile-empty {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  margin: 4px 0 0;
+}
+.tile-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+  font-size: 12.5px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  font-family: inherit;
+}
+.tile-link {
+  color: var(--accent-dark);
+  cursor: pointer;
+}
+.tile-link:hover {
+  text-decoration: underline;
+}
+.tile-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 54px;
+  margin-top: 6px;
+}
+.tile-bars i {
+  flex: 1;
+  background: #cfeefb;
+  border-radius: 3px 3px 0 0;
+}
+.tile-bars i.hi {
+  background: var(--accent);
+}
+.tile-foot {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+
+.form-section {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-dark);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  margin: 14px 0 2px;
+}
+
+.modal-action-left {
+  margin-right: auto;
+}
+
+.split-preview {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  background: var(--accent-soft);
+  border-radius: 9px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.split-preview em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.doc-icon {
+  font-size: 18px;
+}
+.view-title-spaced {
+  margin-top: 8px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.nav-item-dim {
+  opacity: 0.55;
 }
 
 /* --- Toasts -------------------------------------------------------------- */

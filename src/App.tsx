@@ -10,23 +10,45 @@ import { useVault } from './hooks/useVault';
 import { backupFilename, buildBackup, buildCsv } from './lib/backup';
 import { groupIdOf, serviceGroups } from './lib/groups';
 import {
+  canDeleteCreator,
   createCreator,
+  createCreatorFull,
   createEntry,
+  deleteCreator,
+  deleteDocument,
   deleteEntry,
   deleteNote,
+  documentUrl,
+  saveDocument,
+  saveEarning,
   saveNote,
   setPinned,
+  updateCreator,
   updateEntry,
+  uploadDocumentFile,
 } from './lib/queries';
 import { entryLabel, filterEntries } from './lib/search';
 import { clearConnection, loadConnection } from './lib/settings';
 import { resetClient } from './lib/supabase';
-import type { Creator, Entry, EntryInput, SecureNote, User } from './lib/types';
+import type {
+  Creator,
+  CreatorDocument,
+  CreatorInput,
+  Entry,
+  EntryInput,
+  SecureNote,
+  User,
+} from './lib/types';
 import { ActivityView } from './views/ActivityView';
 import { DashboardView } from './views/DashboardView';
 import { EntryListView } from './views/EntryListView';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
+import { CreatorModal, toInput } from './views/dossier/CreatorModal';
+import { DocumentsView, type NewDocument } from './views/dossier/DocumentsView';
+import { DossierView } from './views/dossier/DossierView';
+import { EarningsModal } from './views/dossier/EarningsModal';
+import { sortCreators } from './lib/creators/sort';
 
 type Route =
   | { view: 'dashboard' }
@@ -107,6 +129,13 @@ function VaultApp({
   const [pendingNoteDelete, setPendingNoteDelete] = useState<SecureNote | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
+  const [creatorTab, setCreatorTab] = useState<'overview' | 'logins' | 'documents'>(
+    'overview',
+  );
+  const [creatorModal, setCreatorModal] = useState<Creator | 'new' | null>(null);
+  const [earningsFor, setEarningsFor] = useState<Creator | null>(null);
+  const [pendingCreatorDelete, setPendingCreatorDelete] = useState<Creator | null>(null);
+  const [pendingDocDelete, setPendingDocDelete] = useState<CreatorDocument | null>(null);
   const [version, setVersion] = useState('');
   const [filterService, setFilterService] = useState('');
   const [filterCreator, setFilterCreator] = useState('');
@@ -158,7 +187,8 @@ function VaultApp({
     );
   }
 
-  const { creators, entries, notes, activity } = data;
+  const { creators, entries, notes, documents, activity } = data;
+  const sortedCreators = sortCreators(creators);
 
   // --- Mutations ------------------------------------------------------
   const handleSave = async (input: EntryInput) => {
@@ -241,6 +271,103 @@ function VaultApp({
     } catch {
       toast('Could not save backup', 'error');
     }
+  };
+
+  // --- Dossier ---------------------------------------------------------
+  const handleSaveCreator = async (input: CreatorInput) => {
+    if (creatorModal && creatorModal !== 'new') {
+      await updateCreator(creatorModal, input, user);
+    } else {
+      await createCreatorFull(input, user);
+    }
+    await refresh();
+    toast('Saved');
+  };
+
+  const handleArchiveCreator = async (creator: Creator) => {
+    const next = creator.status === 'ended' ? 'active' : 'ended';
+    try {
+      await updateCreator(creator, { ...toInput(creator), status: next }, user);
+      await refresh();
+      setCreatorModal(null);
+      toast(next === 'ended' ? 'Creator archived' : 'Creator restored');
+    } catch {
+      toast('Could not update — are you online?', 'error');
+    }
+  };
+
+  /** Deletion is blocked while anything hangs off the creator (spec §4). */
+  const attemptDeleteCreator = (creator: Creator) => {
+    const blocked = canDeleteCreator(creator.id, data);
+    if (blocked) {
+      toast(blocked, 'error');
+      return;
+    }
+    setCreatorModal(null);
+    setPendingCreatorDelete(creator);
+  };
+
+  const handleDeleteCreator = async (creator: Creator) => {
+    setPendingCreatorDelete(null);
+    try {
+      await deleteCreator(creator.id, user, creator.name);
+      await refresh();
+      setRoute({ view: 'dashboard' });
+      toast('Creator deleted');
+    } catch {
+      toast('Delete failed — are you online?', 'error');
+    }
+  };
+
+  const handleAddDocument = async (creatorId: string, doc: NewDocument) => {
+    let storagePath: string | null = null;
+    if (doc.file) {
+      storagePath = await uploadDocumentFile(doc.file, creatorId);
+    }
+    await saveDocument(
+      {
+        creator_id: creatorId,
+        label: doc.label,
+        kind: doc.kind,
+        url: doc.url,
+        storage_path: storagePath,
+        size_bytes: doc.file?.size ?? null,
+      },
+      user,
+    );
+    await refresh();
+    toast('Document added');
+  };
+
+  const handleDeleteDocument = async (doc: CreatorDocument) => {
+    setPendingDocDelete(null);
+    try {
+      await deleteDocument(doc.id, user, doc.label);
+      await refresh();
+      toast('Document deleted');
+    } catch {
+      toast('Delete failed — are you online?', 'error');
+    }
+  };
+
+  const handleOpenDocument = async (doc: CreatorDocument) => {
+    try {
+      const url = await documentUrl(doc);
+      if (url) window.vaultBridge?.openExternal(url);
+    } catch {
+      toast('Could not open that document', 'error');
+    }
+  };
+
+  const handleSaveEarnings = async (
+    creator: Creator,
+    month: string,
+    gross: number,
+    currency: string,
+  ) => {
+    await saveEarning(creator.id, month, gross, currency, user);
+    await refresh();
+    toast('Earnings recorded');
   };
 
   const rowHandlers = {
@@ -338,18 +465,59 @@ function VaultApp({
   } else if (route.view === 'creator') {
     const creator = creators.find((c) => c.id === route.id);
     const list = entries.filter((e) => e.creator_id === route.id);
-    content = (
-      <EntryListView
-        title={creator?.name ?? 'Creator'}
-        subtitle={`${list.length} account${list.length === 1 ? '' : 's'}`}
-        entries={list}
-        creators={creators}
-        readOnly={readOnly}
-        showCreator={false}
-        {...rowHandlers}
-        onAdd={() => setModal({ mode: 'new', creatorId: route.id })}
-      />
-    );
+    if (!creator) {
+      content = (
+        <div className="view">
+          <div className="empty-state card">
+            <p>That creator no longer exists.</p>
+          </div>
+        </div>
+      );
+    } else if (creatorTab === 'logins') {
+      content = (
+        <EntryListView
+          title={
+            <span className="title-with-icon">
+              <button className="btn btn-tiny" onClick={() => setCreatorTab('overview')}>
+                ← {creator.name}
+              </button>
+              Logins
+            </span>
+          }
+          subtitle={`${list.length} account${list.length === 1 ? '' : 's'}`}
+          entries={list}
+          creators={creators}
+          readOnly={readOnly}
+          showCreator={false}
+          {...rowHandlers}
+          onAdd={() => setModal({ mode: 'new', creatorId: route.id })}
+        />
+      );
+    } else if (creatorTab === 'documents') {
+      content = (
+        <DocumentsView
+          creatorName={creator.name}
+          documents={documents.filter((d) => d.creator_id === creator.id)}
+          readOnly={readOnly}
+          onAdd={(doc) => handleAddDocument(creator.id, doc)}
+          onDelete={setPendingDocDelete}
+          onOpen={handleOpenDocument}
+          onBack={() => setCreatorTab('overview')}
+        />
+      );
+    } else {
+      content = (
+        <DossierView
+          creator={creator}
+          data={data}
+          readOnly={readOnly}
+          onEdit={() => setCreatorModal(creator)}
+          onOpenLogins={() => setCreatorTab('logins')}
+          onOpenDocuments={() => setCreatorTab('documents')}
+          onRecordEarnings={() => setEarningsFor(creator)}
+        />
+      );
+    }
   } else if (route.view === 'notes') {
     content = (
       <NotesView
@@ -415,17 +583,53 @@ function VaultApp({
             ),
           )}
 
-          <div className="nav-section">Creators</div>
-          {creators.map((c) =>
-            navItem(
-              `${c.name} (${entries.filter((e) => e.creator_id === c.id).length})`,
-              { view: 'creator', id: c.id },
-              !searching && route.view === 'creator' && route.id === c.id,
+          <div className="nav-section">
+            Creators
+            <button
+              className="icon-btn nav-section-add"
+              title="Add creator"
+              disabled={readOnly}
+              onClick={() => setCreatorModal('new')}
+            >
+              +
+            </button>
+          </div>
+          {sortedCreators.map((c) => (
+            <button
+              key={c.id}
+              className={`nav-item ${
+                !searching && route.view === 'creator' && route.id === c.id
+                  ? 'nav-item-active'
+                  : ''
+              } ${c.status === 'ended' || c.status === 'paused' ? 'nav-item-dim' : ''}`}
+              onClick={() => {
+                setQuery('');
+                setCreatorTab('overview');
+                setRoute({ view: 'creator', id: c.id });
+              }}
+            >
               <span className="creator-avatar" style={{ background: c.color }}>
                 {c.name[0]}
-              </span>,
-            ),
-          )}
+              </span>
+              <span className="nav-label">
+                {c.name} ({entries.filter((e) => e.creator_id === c.id).length})
+              </span>
+              {c.status !== 'active' && c.kind === 'creator' && (
+                <span
+                  className="status-dot"
+                  title={c.status}
+                  style={{
+                    background:
+                      c.status === 'ended'
+                        ? '#8aa1ae'
+                        : c.status === 'paused'
+                          ? '#fab219'
+                          : '#7fcdf3',
+                  }}
+                />
+              )}
+            </button>
+          ))}
         </nav>
 
         <div className="sidebar-footer">
@@ -518,6 +722,58 @@ function VaultApp({
           confirmLabel="Delete"
           onConfirm={() => handleDelete(pendingDelete)}
           onCancel={() => setPendingDelete(null)}
+        />
+      )}
+
+      {creatorModal && (
+        <CreatorModal
+          initial={creatorModal === 'new' ? null : creatorModal}
+          existingCount={creators.length}
+          onSave={handleSaveCreator}
+          onArchive={
+            creatorModal !== 'new'
+              ? () => handleArchiveCreator(creatorModal)
+              : undefined
+          }
+          onDelete={
+            creatorModal !== 'new'
+              ? () => attemptDeleteCreator(creatorModal)
+              : undefined
+          }
+          onClose={() => setCreatorModal(null)}
+        />
+      )}
+
+      {earningsFor && (
+        <EarningsModal
+          creator={earningsFor}
+          earnings={data.earnings.filter((e) => e.creator_id === earningsFor.id)}
+          onSave={(month, gross, currency) =>
+            handleSaveEarnings(earningsFor, month, gross, currency)
+          }
+          onClose={() => setEarningsFor(null)}
+        />
+      )}
+
+      {pendingCreatorDelete && (
+        <ConfirmDialog
+          title="Delete creator?"
+          body={`This permanently removes ${pendingCreatorDelete.name} for both of you. She has no logins, documents or earnings attached.`}
+          confirmLabel="Delete"
+          onConfirm={() => handleDeleteCreator(pendingCreatorDelete)}
+          onCancel={() => setPendingCreatorDelete(null)}
+        />
+      )}
+
+      {pendingDocDelete && (
+        <ConfirmDialog
+          title="Delete document?"
+          body={`This removes “${pendingDocDelete.label}” for both of you.${
+            pendingDocDelete.url ? ' The file in Drive is untouched.' : ''
+          }`}
+          confirmLabel="Delete"
+          onConfirm={() => handleDeleteDocument(pendingDocDelete)}
+          onCancel={() => setPendingDocDelete(null)}
         />
       )}
 
