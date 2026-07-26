@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { CreatorAvatar } from '../../components/CreatorAvatar';
 import {
   showsPersonalFields,
   validatePayout,
   validateRevenueShare,
 } from '../../lib/creators/validation';
+import { validateImage } from '../../lib/images';
 import type {
   ContractStatus,
   Creator,
@@ -26,7 +28,7 @@ const STATUSES: CreatorStatus[] = [
 interface Props {
   initial: Creator | null; // null = new creator
   existingCount: number;
-  onSave: (input: CreatorInput) => Promise<void>;
+  onSave: (input: CreatorInput, photo: File | null) => Promise<void>;
   onArchive?: () => Promise<void>;
   onDelete?: () => void;
   onClose: () => void;
@@ -62,6 +64,7 @@ function emptyInput(existingCount: number): CreatorInput {
     subscriber_count: null,
     subscriber_count_as_of: null,
     drive_folder_url: null,
+    avatar_path: null,
   };
 }
 
@@ -87,6 +90,24 @@ export function CreatorModal({
   );
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  const pickPhoto = (file: File | null) => {
+    if (!file) {
+      setPhoto(null);
+      setPhotoPreview(null);
+      return;
+    }
+    const invalid = validateImage(file);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
+    setError('');
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
 
   const set = <K extends keyof CreatorInput>(key: K, value: CreatorInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -131,11 +152,14 @@ export function CreatorModal({
     setSaving(true);
     setError('');
     try {
-      await onSave({
-        ...form,
-        name: form.name.trim(),
-        socials: form.socials.filter((s) => s.label.trim() && s.url.trim()),
-      });
+      await onSave(
+        {
+          ...form,
+          name: form.name.trim(),
+          socials: form.socials.filter((s) => s.label.trim() && s.url.trim()),
+        },
+        photo,
+      );
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed — are you online?');
@@ -147,6 +171,33 @@ export function CreatorModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{initial ? `Edit ${initial.name}` : 'Add creator'}</h2>
+
+        <div className="photo-picker">
+          {photoPreview ? (
+            <img className="photo-preview" src={photoPreview} alt="" />
+          ) : initial ? (
+            <CreatorAvatar creator={initial} size={64} />
+          ) : (
+            <span
+              className="creator-photo"
+              style={{ width: 64, height: 64, background: form.color, fontSize: 27 }}
+            >
+              {form.name[0]?.toUpperCase() ?? '?'}
+            </span>
+          )}
+          <div className="photo-picker-text">
+            <label className="form-label">Photo</label>
+            <input
+              className="input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => pickPhoto(e.target.files?.[0] ?? null)}
+            />
+            <p className="connect-hint photo-hint">
+              Shrunk to 512px on upload. Her public persona photo — nothing private.
+            </p>
+          </div>
+        </div>
 
         <div className="form-row">
           <div className="form-col">

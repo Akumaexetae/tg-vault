@@ -51,6 +51,8 @@ export interface Creator {
   subscriber_count: number | null;
   subscriber_count_as_of: string | null;
   drive_folder_url: string | null;
+  /** Path in the public `avatars` bucket; null falls back to the initial. */
+  avatar_path: string | null;
   // Meta
   created_at: string;
   updated_at: string;

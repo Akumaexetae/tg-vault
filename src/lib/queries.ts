@@ -183,6 +183,28 @@ export async function deleteCreator(
   await logActivity(who, 'deleted', `creator ${name}`);
 }
 
+/** Uploads a resized avatar, overwriting any previous one for this creator. */
+export async function uploadAvatar(
+  creatorId: string,
+  blob: Blob,
+): Promise<string> {
+  const path = `${creatorId}.jpg`;
+  const { error } = await getClient()
+    .storage.from('avatars')
+    .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
+  if (error) throw error;
+  return path;
+}
+
+/** Public URL for an avatar, cache-busted so a replacement shows immediately. */
+export function avatarUrl(path: string | null, updatedAt?: string): string | null {
+  if (!path) return null;
+  const { data } = getClient().storage.from('avatars').getPublicUrl(path);
+  return updatedAt
+    ? `${data.publicUrl}?v=${encodeURIComponent(updatedAt)}`
+    : data.publicUrl;
+}
+
 export async function uploadDocumentFile(
   file: File,
   creatorId: string,

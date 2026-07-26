@@ -1278,6 +1278,265 @@ h2 {
   opacity: 0.55;
 }
 
+/* --- Creator photos ------------------------------------------------------ */
+.creator-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+  overflow: hidden;
+  line-height: 1;
+}
+.creator-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.photo-picker-text {
+  flex: 1;
+  min-width: 0;
+}
+.photo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.photo-hint {
+  text-align: left;
+  margin-top: 4px;
+}
+
+/* --- Creator roster ------------------------------------------------------ */
+.chip-row {
+  display: flex;
+  gap: 6px;
+}
+.chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 99px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--accent-soft);
+}
+.chip-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.creator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.creator-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.creator-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 80, 130, 0.16);
+}
+.creator-card-dim {
+  opacity: 0.6;
+}
+.creator-card-banner {
+  height: 84px;
+  position: relative;
+  background-size: cover;
+  background-position: center 25%;
+}
+.creator-card-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  border-radius: 99px;
+  padding: 2px 9px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(3px);
+}
+.creator-card-face {
+  position: absolute;
+  left: 12px;
+  bottom: -22px;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(0, 60, 100, 0.2);
+}
+.creator-card-body {
+  padding: 28px 12px 12px;
+}
+.creator-card-name {
+  font-weight: 800;
+  font-size: 15px;
+}
+.creator-card-sub {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  margin-bottom: 9px;
+}
+.creator-card-stats {
+  display: flex;
+  gap: 14px;
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.creator-card-stats b {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent-dark);
+}
+.creator-card-stats span {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+
+.creator-card-add {
+  border: 1.5px dashed rgba(0, 100, 150, 0.28);
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 150px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.creator-card-add span {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--accent);
+}
+.creator-card-add:hover {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--accent);
+  transform: none;
+  box-shadow: none;
+}
+
+/* --- Home ---------------------------------------------------------------- */
+.stat-card-primary {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 175, 240, 0.16), var(--shadow);
+}
+.stat-accent {
+  color: var(--accent-dark);
+}
+.delta-up {
+  color: #177a35;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.delta-down {
+  color: #b3253a;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.delta-none {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+.currency-note {
+  margin: -12px 0 18px;
+  font-size: 12px;
+}
+
+.home-chart {
+  padding: 14px 16px 10px;
+  margin-bottom: 22px;
+}
+.home-bars {
+  height: 110px;
+  gap: 10px;
+}
+.home-bar-labels {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+.home-bar-labels span {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--ink-soft);
+}
+
+.attention-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 0;
+  font-size: 13px;
+}
+.attention-row .btn {
+  margin-left: auto;
+}
+.attention-icon {
+  width: 22px;
+  text-align: center;
+}
+
+.creator-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 4px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.creator-line:hover {
+  background: var(--accent-soft);
+}
+.creator-line-name {
+  font-weight: 600;
+}
+.creator-line b {
+  margin-left: auto;
+  color: var(--accent-dark);
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

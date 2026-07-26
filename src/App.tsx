@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CommandPalette } from './components/CommandPalette';
 import { ConnectScreen } from './components/ConnectScreen';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { CreatorAvatar } from './components/CreatorAvatar';
 import { EntryModal } from './components/EntryModal';
 import { IdentityScreen } from './components/IdentityScreen';
 import { ServiceIcon } from './components/ServiceIcon';
@@ -25,8 +26,10 @@ import {
   setPinned,
   updateCreator,
   updateEntry,
+  uploadAvatar,
   uploadDocumentFile,
 } from './lib/queries';
+import { resizeAvatar } from './lib/images';
 import { entryLabel, filterEntries } from './lib/search';
 import { clearConnection, loadConnection } from './lib/settings';
 import { resetClient } from './lib/supabase';
@@ -40,8 +43,9 @@ import type {
   User,
 } from './lib/types';
 import { ActivityView } from './views/ActivityView';
-import { DashboardView } from './views/DashboardView';
+import { CreatorsView } from './views/CreatorsView';
 import { EntryListView } from './views/EntryListView';
+import { HomeView } from './views/HomeView';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
 import { CreatorModal, toInput } from './views/dossier/CreatorModal';
@@ -52,6 +56,7 @@ import { sortCreators } from './lib/creators/sort';
 
 type Route =
   | { view: 'dashboard' }
+  | { view: 'creators' }
   | { view: 'all' }
   | { view: 'notes' }
   | { view: 'health' }
@@ -274,11 +279,19 @@ function VaultApp({
   };
 
   // --- Dossier ---------------------------------------------------------
-  const handleSaveCreator = async (input: CreatorInput) => {
-    if (creatorModal && creatorModal !== 'new') {
-      await updateCreator(creatorModal, input, user);
-    } else {
-      await createCreatorFull(input, user);
+  const handleSaveCreator = async (input: CreatorInput, photo: File | null) => {
+    const existing = creatorModal && creatorModal !== 'new' ? creatorModal : null;
+
+    // Create first when new, so the avatar can be keyed by the creator's id.
+    const saved = existing ?? (await createCreatorFull(input, user));
+
+    let avatarPath = input.avatar_path;
+    if (photo) {
+      avatarPath = await uploadAvatar(saved.id, await resizeAvatar(photo));
+    }
+
+    if (existing || avatarPath !== input.avatar_path) {
+      await updateCreator(saved, { ...input, avatar_path: avatarPath }, user);
     }
     await refresh();
     toast('Saved');
@@ -394,11 +407,27 @@ function VaultApp({
     );
   } else if (route.view === 'dashboard') {
     content = (
-      <DashboardView
+      <HomeView
         data={data}
         readOnly={readOnly}
-        onShowHealth={() => setRoute({ view: 'health' })}
-        {...rowHandlers}
+        onOpenCreator={(c) => {
+          setCreatorTab('overview');
+          setRoute({ view: 'creator', id: c.id });
+        }}
+        onOpenHealth={() => setRoute({ view: 'health' })}
+        onRecordEarnings={setEarningsFor}
+      />
+    );
+  } else if (route.view === 'creators') {
+    content = (
+      <CreatorsView
+        data={data}
+        readOnly={readOnly}
+        onOpen={(c) => {
+          setCreatorTab('overview');
+          setRoute({ view: 'creator', id: c.id });
+        }}
+        onAdd={() => setCreatorModal('new')}
       />
     );
   } else if (route.view === 'all') {
@@ -567,13 +596,14 @@ function VaultApp({
         </div>
 
         <nav className="sidebar-nav">
-          {navItem('Dashboard', { view: 'dashboard' }, on('dashboard'))}
-          {navItem('All accounts', { view: 'all' }, on('all'))}
+          {navItem('Home', { view: 'dashboard' }, on('dashboard'))}
+          {navItem('Creators', { view: 'creators' }, on('creators'))}
+          {navItem('Vault', { view: 'all' }, on('all'))}
           {navItem('Secure notes', { view: 'notes' }, on('notes'))}
-          {navItem('Password health', { view: 'health' }, on('health'))}
           {navItem('Activity', { view: 'activity' }, on('activity'))}
 
           <div className="nav-section">Services</div>
+          {navItem('Password health', { view: 'health' }, on('health'))}
           {groups.map((g) =>
             navItem(
               `${g.name} (${g.count})`,
@@ -608,9 +638,7 @@ function VaultApp({
                 setRoute({ view: 'creator', id: c.id });
               }}
             >
-              <span className="creator-avatar" style={{ background: c.color }}>
-                {c.name[0]}
-              </span>
+              <CreatorAvatar creator={c} size={20} />
               <span className="nav-label">
                 {c.name} ({entries.filter((e) => e.creator_id === c.id).length})
               </span>

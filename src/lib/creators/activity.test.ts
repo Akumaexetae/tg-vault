@@ -30,6 +30,7 @@ const base: CreatorInput = {
   subscriber_count: null,
   subscriber_count_as_of: null,
   drive_folder_url: null,
+  avatar_path: null,
 };
 
 const before: Creator = {
