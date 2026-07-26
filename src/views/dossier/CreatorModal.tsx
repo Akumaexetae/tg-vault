@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CreatorAvatar } from '../../components/CreatorAvatar';
+import { CloseIcon } from '../../components/icons';
 import {
   showsPersonalFields,
   validatePayout,
@@ -433,7 +434,7 @@ export function CreatorModal({
                 set('socials', form.socials.filter((_, j) => j !== i))
               }
             >
-              ✕
+              <CloseIcon size={13} />
             </button>
           </div>
         ))}

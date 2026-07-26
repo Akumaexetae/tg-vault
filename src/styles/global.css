@@ -8,6 +8,7 @@
   --ink-soft: #5b7585;
   --card: #ffffff;
   --danger: #e05260;
+  --warning: #e08a19;
   --border: rgba(0, 100, 150, 0.12);
   --shadow: 0 2px 10px rgba(0, 80, 130, 0.08);
   --radius: 12px;
@@ -1582,8 +1583,23 @@ h2 {
   margin-left: auto;
 }
 .attention-icon {
-  width: 22px;
-  text-align: center;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.notice-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  margin: -12px 0 20px;
+  font-size: 13px;
+  border-left: 3px solid var(--warning);
+  color: var(--ink);
+}
+.notice-card svg {
+  color: var(--warning);
+  flex-shrink: 0;
 }
 
 .creator-line {

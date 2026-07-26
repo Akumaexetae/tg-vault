@@ -1,4 +1,5 @@
 import { CreatorAvatar } from '../components/CreatorAvatar';
+import { KeyIcon, WarningIcon } from '../components/icons';
 import { healthReport } from '../lib/health';
 import {
   agencySeries,
@@ -8,7 +9,6 @@ import {
   monthsAgo,
   monthTotals,
 } from '../lib/money';
-import { timeAgo } from '../lib/time';
 import type { Creator, VaultData } from '../lib/types';
 
 interface Props {
@@ -66,6 +66,12 @@ export function HomeView({
 
   const hasEarnings = data.earnings.length > 0;
 
+  // A zero cut is almost always a missing share rather than a real zero.
+  const earningCreatorIds = new Set(byCreator.map((r) => r.creator_id));
+  const noShares = data.creators.filter(
+    (c) => earningCreatorIds.has(c.id) && !c.revenue_share,
+  );
+
   return (
     <div className="view">
       <div className="view-header">
@@ -104,17 +110,18 @@ export function HomeView({
               </span>
               <Delta value={monthDelta(primary?.agency ?? 0, previous?.agency ?? 0)} />
             </div>
+          </div>
 
-            <div className="stat-card card">
-              <span className="stat-label">Owed to creators</span>
-              <span className="stat-value">
-                {money(primary?.creators ?? 0, currency)}
-              </span>
-              <span className="delta-none">
-                {byCreator.length} payout{byCreator.length === 1 ? '' : 's'} due
+          {noShares.length > 0 && (
+            <div className="card notice-card">
+              <WarningIcon size={16} />
+              <span>
+                Your cut reads zero because{' '}
+                <strong>{noShares.map((c) => c.name).join(', ')}</strong> {noShares.length === 1 ? 'has' : 'have'} no
+                revenue share set. Add it under Edit creator and this fills in.
               </span>
             </div>
-          </div>
+          )}
 
           {others.length > 0 && (
             <p className="muted currency-note">
@@ -169,7 +176,7 @@ export function HomeView({
                 ))}
                 {healthIssues > 0 && (
                   <div className="attention-row">
-                    <span className="attention-icon">🔑</span>
+                    <KeyIcon size={18} className="attention-icon" />
                     <span>
                       {healthIssues} account{healthIssues === 1 ? '' : 's'} with weak,
                       reused or ageing passwords
@@ -201,22 +208,6 @@ export function HomeView({
                     </button>
                   );
                 })}
-              </div>
-
-              <h2>Activity</h2>
-              <div className="card activity-card">
-                {data.activity.length === 0 && <p className="muted">Nothing yet.</p>}
-                {data.activity.slice(0, 6).map((a) => (
-                  <div key={a.id} className="activity-item">
-                    <span className={`activity-avatar avatar-${a.who.toLowerCase()}`}>
-                      {a.who[0]}
-                    </span>
-                    <span className="activity-text">
-                      <strong>{a.who}</strong> {a.action} {a.entry_label}
-                      <span className="activity-time">{timeAgo(a.created_at)}</span>
-                    </span>
-                  </div>
-                ))}
               </div>
             </aside>
           </div>

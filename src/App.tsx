@@ -4,6 +4,7 @@ import { ConnectScreen } from './components/ConnectScreen';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { CreatorAvatar } from './components/CreatorAvatar';
 import { NavGroup } from './components/NavGroup';
+import { PowerIcon } from './components/icons';
 import { EntryModal } from './components/EntryModal';
 import { IdentityScreen } from './components/IdentityScreen';
 import { ServiceIcon } from './components/ServiceIcon';
@@ -746,7 +747,7 @@ function VaultApp({
               title="Disconnect this PC from the vault"
               onClick={onDisconnect}
             >
-              ⏻
+              <PowerIcon size={14} />
             </button>
           </div>
         </div>

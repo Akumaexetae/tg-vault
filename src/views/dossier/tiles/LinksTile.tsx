@@ -1,3 +1,4 @@
+import { DocumentIcon, LinkIcon } from '../../../components/icons';
 import type { Creator, CreatorDocument } from '../../../lib/types';
 
 interface Props {
@@ -30,11 +31,13 @@ export function LinksTile({ creator, documents, onOpenDocuments }: Props) {
           className="tile-row tile-link"
           onClick={() => window.vaultBridge?.openExternal(l.url)}
         >
-          🔗 {l.label} ↗
+          <LinkIcon size={14} />
+          {l.label}
         </button>
       ))}
       <button className="tile-row tile-link" onClick={onOpenDocuments}>
-        📄 {documents.length} document{documents.length === 1 ? '' : 's'}
+        <DocumentIcon size={14} />
+        {documents.length} document{documents.length === 1 ? '' : 's'}
       </button>
     </div>
   );

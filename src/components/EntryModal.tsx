@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SERVICES, serviceDef } from '../lib/catalog';
 import type { Creator, CustomField, Entry, EntryInput } from '../lib/types';
+import { CloseIcon } from './icons';
 import { ServiceIcon } from './ServiceIcon';
 
 interface Props {
@@ -253,7 +254,7 @@ export function EntryModal({
               title="Remove field"
               onClick={() => setFields((x) => x.filter((_, j) => j !== i))}
             >
-              ✕
+              <CloseIcon size={13} />
             </button>
           </div>
         ))}

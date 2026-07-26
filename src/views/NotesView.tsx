@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PencilIcon, TrashIcon } from '../components/icons';
 import { timeAgo } from '../lib/time';
 import type { Creator, SecureNote } from '../lib/types';
 
@@ -44,7 +45,7 @@ export function NotesView({ notes, creators, readOnly, onSave, onDelete }: Props
                   )}
                   <div className="note-actions">
                     <button className="icon-btn" title="Edit" disabled={readOnly} onClick={() => setEditing(n)}>
-                      ✎
+                      <PencilIcon size={13} />
                     </button>
                     <button
                       className="icon-btn icon-btn-danger"
@@ -52,7 +53,7 @@ export function NotesView({ notes, creators, readOnly, onSave, onDelete }: Props
                       disabled={readOnly}
                       onClick={() => onDelete(n)}
                     >
-                      ✕
+                      <TrashIcon size={13} />
                     </button>
                   </div>
                 </div>

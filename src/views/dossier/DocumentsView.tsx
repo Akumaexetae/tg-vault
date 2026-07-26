@@ -1,4 +1,10 @@
 import { useState } from 'react';
+import {
+  AttachIcon,
+  CloseIcon,
+  DocumentIcon,
+  IdIcon,
+} from '../../components/icons';
 import { validateDocument } from '../../lib/creators/validation';
 import { timeAgo } from '../../lib/time';
 import type { CreatorDocument } from '../../lib/types';
@@ -20,10 +26,10 @@ interface Props {
   onBack: () => void;
 }
 
-const ICON: Record<CreatorDocument['kind'], string> = {
-  contract: '📄',
-  id: '🪪',
-  other: '📎',
+const ICON: Record<CreatorDocument['kind'], typeof DocumentIcon> = {
+  contract: DocumentIcon,
+  id: IdIcon,
+  other: AttachIcon,
 };
 
 export function DocumentsView({
@@ -101,10 +107,12 @@ export function DocumentsView({
         </div>
       ) : (
         <div className="entry-list">
-          {documents.map((d) => (
+          {documents.map((d) => {
+            const Icon = ICON[d.kind];
+            return (
             <div key={d.id} className="card entry-row">
               <div className="entry-main">
-                <span className="doc-icon">{ICON[d.kind]}</span>
+                <Icon size={20} className="doc-icon" />
                 <div className="entry-id">
                   <span className="entry-service">{d.label}</span>
                   <span className="entry-tags">
@@ -124,12 +132,13 @@ export function DocumentsView({
                     disabled={readOnly}
                     onClick={() => onDelete(d)}
                   >
-                    ✕
+                    <CloseIcon size={13} />
                   </button>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
