@@ -54,9 +54,21 @@ alter table entries disable row level security;
 alter table activity disable row level security;
 
 -- Realtime: both installs subscribe to live changes.
-alter publication supabase_realtime add table creators;
-alter publication supabase_realtime add table entries;
-alter publication supabase_realtime add table activity;
+do $$
+begin
+  alter publication supabase_realtime add table creators;
+exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table entries;
+exception when duplicate_object then null;
+end $$;
+do $$
+begin
+  alter publication supabase_realtime add table activity;
+exception when duplicate_object then null;
+end $$;
 
 -- Built-in creator for agency-level/shared logins.
 insert into creators (name, color)
@@ -88,7 +100,11 @@ alter table secure_notes disable row level security;
 drop policy if exists "vault_all" on secure_notes;
 create policy "vault_all" on secure_notes for all using (true) with check (true);
 
-alter publication supabase_realtime add table secure_notes;
+do $$
+begin
+  alter publication supabase_realtime add table secure_notes;
+exception when duplicate_object then null;
+end $$;
 
 -- =====================================================================
 -- migration-003.sql
