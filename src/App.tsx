@@ -40,7 +40,15 @@ import {
 } from './lib/queries';
 import { resizeAvatar } from './lib/images';
 import { entryLabel, filterEntries } from './lib/search';
-import { clearConnection, loadConnection } from './lib/settings';
+import {
+  clearConnection,
+  loadConnection,
+  loadPreference,
+  loadUser,
+  migrateLegacySettings,
+  savePreference,
+  saveUser,
+} from './lib/settings';
 import { resetClient } from './lib/supabase';
 import type {
   Creator,
@@ -95,11 +103,10 @@ const CREATOR_COLORS = [
 ];
 
 export function App() {
+  // Bring across anything an earlier version left in localStorage.
+  migrateLegacySettings();
   const [connected, setConnected] = useState(() => loadConnection() !== null);
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('tg-vault-user');
-    return stored === 'Tyler' || stored === 'Gabriel' ? stored : null;
-  });
+  const [user, setUser] = useState<User | null>(() => loadUser());
 
   // First launch: point this PC at the vault, then say who's using it.
   if (!connected) {
@@ -117,7 +124,7 @@ export function App() {
     return (
       <IdentityScreen
         onPick={(u) => {
-          localStorage.setItem('tg-vault-user', u);
+          saveUser(u);
           setUser(u);
         }}
       />
@@ -171,7 +178,7 @@ function VaultApp({
         return {
           creators: true,
           vault: true,
-          ...JSON.parse(localStorage.getItem('tg-vault-nav-groups') ?? '{}'),
+          ...loadPreference('nav-groups', {}),
         };
       } catch {
         return { creators: true, vault: true };
@@ -182,7 +189,7 @@ function VaultApp({
   const toggleGroup = (key: 'creators' | 'vault') =>
     setOpenGroups((g) => {
       const next = { ...g, [key]: !g[key] };
-      localStorage.setItem('tg-vault-nav-groups', JSON.stringify(next));
+      savePreference('nav-groups', next);
       return next;
     });
   const [version, setVersion] = useState('');

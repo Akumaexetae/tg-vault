@@ -1,6 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+// Read once, synchronously, so the renderer knows on first paint whether this
+// PC is already connected.
+const initialSettings = ipcRenderer.sendSync('settings:get-sync') as Record<
+  string,
+  unknown
+>;
+
 contextBridge.exposeInMainWorld('vaultBridge', {
+  initialSettings,
+  saveSettings: (patch: Record<string, unknown>): Promise<Record<string, unknown>> =>
+    ipcRenderer.invoke('settings:set', patch),
   saveCache: (data: string): Promise<boolean> =>
     ipcRenderer.invoke('cache:save', data),
   loadCache: (): Promise<string | null> => ipcRenderer.invoke('cache:load'),

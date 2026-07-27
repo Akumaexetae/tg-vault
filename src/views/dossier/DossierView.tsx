@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { splitEarning } from '../../lib/creators/earnings';
+import { loadPreference, savePreference } from '../../lib/settings';
 import type { Creator, VaultData } from '../../lib/types';
 import { DossierHero } from './DossierHero';
 import { EarningsTile } from './tiles/EarningsTile';
@@ -9,7 +10,7 @@ import { PayoutTile } from './tiles/PayoutTile';
 
 export type DossierLayout = 'wide' | 'tall';
 
-const LAYOUT_KEY = 'tg-vault-dossier-layout';
+const LAYOUT_KEY = 'dossier-layout';
 
 interface Props {
   creator: Creator;
@@ -33,11 +34,11 @@ export function DossierView({
   // Layout is a personal preference, stored per install — Tyler and Gabriel
   // can differ.
   const [layout, setLayout] = useState<DossierLayout>(
-    () => (localStorage.getItem(LAYOUT_KEY) as DossierLayout) ?? 'wide',
+    () => loadPreference<DossierLayout>(LAYOUT_KEY, 'wide'),
   );
 
   const switchLayout = (next: DossierLayout) => {
-    localStorage.setItem(LAYOUT_KEY, next);
+    savePreference(LAYOUT_KEY, next);
     setLayout(next);
   };
 

@@ -65,6 +65,36 @@ if (started) {
   app.quit();
 }
 
+// --- Machine settings ------------------------------------------------------
+// Connection details and identity live in a file, NOT localStorage: in dev the
+// renderer's origin is http://localhost:<port>, and Vite picks a new port when
+// the old one is busy — a new origin means an empty localStorage and a fresh
+// "connect this PC" prompt. A file in userData survives all of that.
+const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
+
+function readSettings(): Record<string, unknown> {
+  try {
+    return JSON.parse(fs.readFileSync(settingsPath(), 'utf-8')) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+// Synchronous so the renderer can read it during its first render, before
+// deciding whether to show the connect screen.
+ipcMain.on('settings:get-sync', (event) => {
+  event.returnValue = readSettings();
+});
+
+ipcMain.handle('settings:set', (_event, patch: Record<string, unknown>) => {
+  const next = { ...readSettings(), ...patch };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === null || value === undefined) delete next[key];
+  }
+  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), 'utf-8');
+  return next;
+});
+
 // --- Local cache: last-synced snapshot for offline reads -------------------
 const cachePath = () => path.join(app.getPath('userData'), 'vault-cache.json');
 

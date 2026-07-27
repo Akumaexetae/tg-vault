@@ -3,6 +3,10 @@ export {};
 declare global {
   interface Window {
     vaultBridge: {
+      initialSettings: Record<string, unknown>;
+      saveSettings: (
+        patch: Record<string, unknown>,
+      ) => Promise<Record<string, unknown>>;
       saveCache: (data: string) => Promise<boolean>;
       loadCache: () => Promise<string | null>;
       openExternal: (url: string) => Promise<void>;
