@@ -2113,6 +2113,73 @@ table.canvas-table {
   margin-top: 10px;
 }
 
+/* --- Drive picker -------------------------------------------------------- */
+.drive-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  margin: 6px 0;
+}
+.drive-crumb {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--accent-dark);
+  cursor: pointer;
+}
+.drive-crumb:disabled {
+  color: var(--ink);
+  font-weight: 700;
+  cursor: default;
+}
+.drive-sep {
+  color: var(--ink-soft);
+  margin-left: 4px;
+}
+
+.drive-list {
+  padding: 8px 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.drive-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.drive-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 5px 6px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.drive-open:hover {
+  background: var(--accent-soft);
+}
+.drive-open svg {
+  color: var(--accent-dark);
+  flex-shrink: 0;
+}
+.drive-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

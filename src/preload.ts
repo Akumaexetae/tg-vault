@@ -26,4 +26,12 @@ contextBridge.exposeInMainWorld('vaultBridge', {
   onUpdateReady: (callback: () => void): void => {
     ipcRenderer.on('update:ready', callback);
   },
+  driveStatus: (): Promise<{ configured: boolean; signedIn: boolean }> =>
+    ipcRenderer.invoke('drive:status'),
+  driveSetClientId: (clientId: string): Promise<void> =>
+    ipcRenderer.invoke('drive:setClientId', clientId),
+  driveSignIn: (): Promise<boolean> => ipcRenderer.invoke('drive:signIn'),
+  driveSignOut: (): Promise<void> => ipcRenderer.invoke('drive:signOut'),
+  driveList: (query: string): Promise<unknown[]> =>
+    ipcRenderer.invoke('drive:list', query),
 });

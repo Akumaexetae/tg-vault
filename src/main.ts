@@ -11,6 +11,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import started from 'electron-squirrel-startup';
 import { parseProxy } from './lib/proxy';
+import { clearTokens, loadTokens, refresh, signIn } from './driveAuth';
 
 /**
  * Auto-update straight from GitHub releases.
@@ -226,6 +227,74 @@ ipcMain.handle(
 ipcMain.handle('login:logout', async (_event, id: string) => {
   await session.fromPartition(`persist:acct-${id}`).clearStorageData();
   proxyCreds.delete(`acct-${id}`);
+});
+
+// --- Google Drive ----------------------------------------------------------
+// The client id is not a secret (Google's desktop-app flow uses PKCE instead),
+// but it is per-installation config, so it lives in userData rather than code.
+const driveConfigPath = () => path.join(app.getPath('userData'), 'drive-config.json');
+
+const readClientId = (): string | null => {
+  try {
+    return (JSON.parse(fs.readFileSync(driveConfigPath(), 'utf-8')) as { clientId?: string })
+      .clientId ?? null;
+  } catch {
+    return null;
+  }
+};
+
+ipcMain.handle('drive:status', () => ({
+  configured: !!readClientId(),
+  signedIn: !!loadTokens(),
+}));
+
+ipcMain.handle('drive:setClientId', (_event, clientId: string) => {
+  fs.writeFileSync(driveConfigPath(), JSON.stringify({ clientId }), 'utf-8');
+});
+
+ipcMain.handle('drive:signIn', async () => {
+  const clientId = readClientId();
+  if (!clientId) throw new Error('Add your Google client ID first.');
+  await signIn(clientId);
+  return true;
+});
+
+ipcMain.handle('drive:signOut', () => {
+  clearTokens();
+});
+
+/** Valid access token, refreshing when it's close to expiry. */
+async function driveToken(): Promise<string> {
+  const clientId = readClientId();
+  if (!clientId) throw new Error('Google Drive is not set up yet.');
+  const current = loadTokens();
+  if (!current) throw new Error('Sign in to Google Drive first.');
+  if (Date.now() < current.expires_at - 60_000) return current.access_token;
+  const refreshed = await refresh(clientId);
+  if (!refreshed) throw new Error('Your Google sign-in expired — sign in again.');
+  return refreshed.access_token;
+}
+
+ipcMain.handle('drive:list', async (_event, query: string) => {
+  const token = await driveToken();
+  const params = new URLSearchParams({
+    q: query,
+    fields: 'files(id,name,mimeType,webViewLink,iconLink,modifiedTime)',
+    pageSize: '200',
+    orderBy: 'folder,name',
+    supportsAllDrives: 'true',
+    includeItemsFromAllDrives: 'true',
+  });
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  const body = (await response.json()) as {
+    files?: unknown[];
+    error?: { message?: string };
+  };
+  if (!response.ok) throw new Error(body.error?.message ?? 'Drive request failed.');
+  return body.files ?? [];
 });
 
 // --- Backup export ---------------------------------------------------------

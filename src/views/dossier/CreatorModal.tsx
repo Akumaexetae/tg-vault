@@ -7,6 +7,7 @@ import {
   validateRevenueShare,
 } from '../../lib/creators/validation';
 import { validateImage } from '../../lib/images';
+import { DrivePicker } from './DrivePicker';
 import type {
   ContractStatus,
   Creator,
@@ -93,6 +94,7 @@ export function CreatorModal({
   const [saving, setSaving] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [pickingDrive, setPickingDrive] = useState(false);
 
   const pickPhoto = (file: File | null) => {
     if (!file) {
@@ -388,11 +390,20 @@ export function CreatorModal({
         <div className="form-row">
           <div className="form-col">
             <label className="form-label">Drive folder</label>
-            <input
-              className="input"
-              placeholder="https://drive.google.com/drive/folders/…"
-              {...text('drive_folder_url')}
-            />
+            <div className="form-row">
+              <input
+                className="input"
+                placeholder="https://drive.google.com/drive/folders/…"
+                {...text('drive_folder_url')}
+              />
+              <button
+                className="btn"
+                title="Browse your Google Drive"
+                onClick={() => setPickingDrive(true)}
+              >
+                Browse
+              </button>
+            </div>
           </div>
           {personal && (
             <>
@@ -446,6 +457,16 @@ export function CreatorModal({
         </button>
 
         {error && <div className="form-error">{error}</div>}
+
+        {pickingDrive && (
+          <DrivePicker
+            onPick={(file) => {
+              set('drive_folder_url', file.webViewLink ?? null);
+              setPickingDrive(false);
+            }}
+            onClose={() => setPickingDrive(false)}
+          />
+        )}
 
         <div className="modal-actions">
           {initial && initial.kind === 'creator' && onArchive && (
