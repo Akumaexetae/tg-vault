@@ -86,7 +86,6 @@ The individual files are kept for history:
 | `migration-007.sql` | planning canvas |
 | `migration-008.sql` | canvas images bucket |
 | `migration-009.sql` | arrows attached to shapes |
-| `migration-007.sql` | planning canvas |
 
 Three storage buckets are needed: **`avatars`** (public), **`documents`** (private, 10 MB) and **`canvas-images`** (public, 5 MB). Creating them in the dashboard is more reliable than SQL, and each needs a policy on `storage.objects` — RLS there is always on and can't be disabled.
 
