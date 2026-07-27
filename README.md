@@ -48,9 +48,20 @@ npm run make       # Windows installer → out/make/squirrel.windows/x64/
 - Totals grouped by currency — EUR is never silently added to USD
 - Payout tracking: mark a month paid, with who and when
 
-**Planning**
+**Planning — board**
 - Shared board (To do / Doing / Done) with drag-and-drop and live sync
 - Cards carry notes, assignee, an optional creator link and a due date; overdue cards flag
+- Fractional indexing, so moving a card writes one row rather than renumbering its column
+
+**Planning — canvas**
+- Infinite pan/zoom surface, multiple named boards
+- Notes, text, boxes, ellipses, diamonds, arrows, tables and images
+- Tables store their grid as JSON in the object's `text` field — no schema of their own, and they inherit sync, undo and delete unchanged
+- Undo/redo (`Ctrl+Z` / `Ctrl+Shift+Z`) recording only the objects each step touched, coalescing a drag into one step
+- Multi-select (`Shift+drag` or `Shift+click`), group move, duplicate (`Ctrl+D`), copy/paste
+- Paste or drop a screenshot; images are re-encoded to 1600px JPEG before upload
+- Arrows attach to shapes and follow them, meeting the edge rather than the centre; loose arrows draw dashed
+- Live cursors over an ephemeral broadcast channel — a pointer moving 20×/sec is not data worth storing
 
 **Everything else**
 - Secure notes for anything that isn't a login
@@ -73,8 +84,11 @@ The individual files are kept for history:
 | `migration-005.sql` | payout tracking |
 | `migration-006.sql` | planning board |
 | `migration-007.sql` | planning canvas |
+| `migration-008.sql` | canvas images bucket |
+| `migration-009.sql` | arrows attached to shapes |
+| `migration-007.sql` | planning canvas |
 
-Two storage buckets are needed: **`avatars`** (public, 2 MB) and **`documents`** (private, 10 MB). Creating them in the dashboard is more reliable than SQL, and each needs a policy on `storage.objects` — RLS there is always on and can't be disabled.
+Three storage buckets are needed: **`avatars`** (public), **`documents`** (private, 10 MB) and **`canvas-images`** (public, 5 MB). Creating them in the dashboard is more reliable than SQL, and each needs a policy on `storage.objects` — RLS there is always on and can't be disabled.
 
 ### Why the key is a master key
 
