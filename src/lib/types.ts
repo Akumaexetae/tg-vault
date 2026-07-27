@@ -170,6 +170,9 @@ export interface CanvasObject {
   /** Arrows only: the far endpoint. Other kinds use w/h. */
   x2: number | null;
   y2: number | null;
+  /** Arrows only: shapes this arrow is attached to, so it follows them. */
+  from_id: string | null;
+  to_id: string | null;
   text: string;
   color: string;
   z: number;

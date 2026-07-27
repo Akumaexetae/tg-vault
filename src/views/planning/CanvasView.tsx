@@ -38,6 +38,7 @@ import {
 } from '../../lib/canvasImages';
 import type { CanvasObject, CanvasObjectKind, User } from '../../lib/types';
 import { CanvasTable } from './CanvasTable';
+import { arrowEnds, attachTarget } from '../../lib/connect';
 
 interface Props {
   user: User;
@@ -148,6 +149,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
                 h: o.h,
                 x2: o.x2,
                 y2: o.y2,
+                from_id: o.from_id,
+                to_id: o.to_id,
                 text: o.text,
                 color: o.color,
                 z: o.z,
@@ -207,6 +210,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
           h: d.h,
           x2: kind === 'arrow' ? Math.round(centre.x + 160) : null,
           y2: kind === 'arrow' ? Math.round(centre.y) : null,
+          from_id: null,
+          to_id: null,
           text: kind === 'table' ? serializeTable(emptyTable()) : '',
           color: d.color,
           z: nextZ(objects),
@@ -274,6 +279,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
               h: o.h,
               x2: o.x2 === null ? null : o.x2 + offset,
               y2: o.y2 === null ? null : o.y2 + offset,
+              from_id: o.from_id,
+              to_id: o.to_id,
               text: o.text,
               color: o.color,
               z: z++,
@@ -320,6 +327,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
             h: size.h,
             x2: null,
             y2: null,
+            from_id: null,
+            to_id: null,
             text: url,
             color: '#ffffff',
             z: nextZ(objectsRef.current),
@@ -439,7 +448,13 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
         h: Math.max(40, Math.round(drag.startH + (world.y - drag.startY))),
       });
     } else if (drag.mode === 'arrow') {
-      patchLocal(drag.id, { x2: Math.round(world.x), y2: Math.round(world.y) });
+      // Dropping the head on a shape attaches to it; elsewhere it stays loose.
+      const over = attachTarget(objects, world, drag.id);
+      patchLocal(drag.id, {
+        x2: Math.round(world.x),
+        y2: Math.round(world.y),
+        to_id: over?.id ?? null,
+      });
     }
   };
 
@@ -481,7 +496,20 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
     try {
       await Promise.all(
         after.map((o) =>
-          updateObject(o.id, { x: o.x, y: o.y, w: o.w, h: o.h, x2: o.x2, y2: o.y2 }, user),
+          updateObject(
+            o.id,
+            {
+              x: o.x,
+              y: o.y,
+              w: o.w,
+              h: o.h,
+              x2: o.x2,
+              y2: o.y2,
+              from_id: o.from_id,
+              to_id: o.to_id,
+            },
+            user,
+          ),
         ),
       );
     } catch (e) {
@@ -730,7 +758,10 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
           const isSelected = selected.includes(o.id);
 
           if (o.kind === 'arrow') {
-            const end = worldToScreen(o.x2 ?? o.x, o.y2 ?? o.y, view);
+            // Ends follow whatever shapes the arrow is attached to.
+            const ends = arrowEnds(o, objects);
+            const start = worldToScreen(ends.start.x, ends.start.y, view);
+            const end = worldToScreen(ends.end.x, ends.end.y, view);
             return (
               <svg key={o.id} className="canvas-arrow" aria-hidden="true">
                 <defs>
@@ -746,12 +777,13 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
                   </marker>
                 </defs>
                 <line
-                  x1={p.x}
-                  y1={p.y}
+                  x1={start.x}
+                  y1={start.y}
                   x2={end.x}
                   y2={end.y}
                   stroke={o.color}
                   strokeWidth={isSelected ? 3 : 2}
+                  strokeDasharray={o.from_id || o.to_id ? undefined : '6 4'}
                   markerEnd={`url(#head-${o.id})`}
                 />
                 {isSelected && !readOnly && (

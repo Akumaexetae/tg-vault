@@ -22,6 +22,8 @@ const obj = (over: Partial<CanvasObject> & { id: string }): CanvasObject => ({
   h: 120,
   x2: null,
   y2: null,
+  from_id: null,
+  to_id: null,
   text: '',
   color: '#ffd97a',
   z: 1,
