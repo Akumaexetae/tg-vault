@@ -149,7 +149,15 @@ export interface Canvas {
   updated_by: User;
 }
 
-export type CanvasObjectKind = 'note' | 'text' | 'box' | 'arrow';
+export type CanvasObjectKind =
+  | 'note'
+  | 'text'
+  | 'box'
+  | 'ellipse'
+  | 'diamond'
+  | 'arrow'
+  | 'table'
+  | 'image';
 
 export interface CanvasObject {
   id: string;

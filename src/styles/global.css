@@ -1987,6 +1987,82 @@ h2 {
   cursor: nwse-resize;
 }
 
+.canvas-ellipse {
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.canvas-diamond {
+  border: 2px solid var(--accent);
+  background: rgba(255, 255, 255, 0.55);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  padding: 18px;
+}
+
+.canvas-table {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.14);
+  padding: 0;
+  overflow: visible;
+}
+.canvas-table-wrap {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.canvas-table table,
+table.canvas-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.canvas-table td {
+  border: 1px solid var(--border);
+  padding: 0;
+}
+.canvas-cell {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 3px 5px;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+  min-width: 0;
+}
+.canvas-cell-focus {
+  background: var(--accent-soft);
+}
+.canvas-table-tools {
+  position: absolute;
+  left: 0;
+  bottom: -30px;
+  display: flex;
+  gap: 4px;
+}
+
+.canvas-marquee {
+  position: absolute;
+  border: 1.5px dashed var(--accent);
+  background: rgba(0, 175, 240, 0.09);
+  pointer-events: none;
+}
+
+.canvas-hint {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  padding: 6px 2px 8px;
+}
+
 .canvas-arrow {
   position: absolute;
   inset: 0;
