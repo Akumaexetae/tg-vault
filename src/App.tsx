@@ -45,7 +45,6 @@ import {
   loadConnection,
   loadPreference,
   loadUser,
-  migrateLegacySettings,
   savePreference,
   saveUser,
 } from './lib/settings';
@@ -103,8 +102,6 @@ const CREATOR_COLORS = [
 ];
 
 export function App() {
-  // Bring across anything an earlier version left in localStorage.
-  migrateLegacySettings();
   const [connected, setConnected] = useState(() => loadConnection() !== null);
   const [user, setUser] = useState<User | null>(() => loadUser());
 

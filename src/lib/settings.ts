@@ -33,9 +33,13 @@ function persist(patch: Record<string, unknown>): void {
 
 /**
  * Moves anything left in localStorage by an earlier version into the file, so
- * an existing install doesn't get asked to reconnect after updating.
+ * an existing install isn't asked to reconnect after updating.
+ *
+ * Runs once at module load rather than from a component: this is a side
+ * effect, and React may render a component body twice.
  */
-export function migrateLegacySettings(): void {
+function migrateLegacySettings(): void {
+  if (typeof localStorage === 'undefined') return;
   try {
     if (!cache.connection) {
       const raw = localStorage.getItem(LEGACY_CONNECTION_KEY);
@@ -52,6 +56,8 @@ export function migrateLegacySettings(): void {
     /* nothing to migrate */
   }
 }
+
+migrateLegacySettings();
 
 export function loadConnection(): Connection | null {
   const stored = cache.connection as Connection | undefined;
