@@ -350,6 +350,20 @@ export async function deleteCanvas(
   await logActivity(who, 'deleted', `canvas “${name}”`);
 }
 
+/** Uploads a canvas image and returns its public URL, stored in object.text. */
+export async function uploadCanvasImage(
+  canvasId: string,
+  blob: Blob,
+): Promise<string> {
+  const path = `${canvasId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await getClient()
+    .storage.from('canvas-images')
+    .upload(path, blob, { contentType: 'image/jpeg' });
+  if (error) throw storageError(error, 'canvas-images');
+  const { data } = getClient().storage.from('canvas-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function createObject(
   object: Omit<CanvasObject, 'id' | 'created_at' | 'updated_at' | 'updated_by'>,
   who: User,

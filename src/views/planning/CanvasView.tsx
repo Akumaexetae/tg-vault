@@ -28,8 +28,14 @@ import {
   deleteCanvas,
   deleteObject,
   updateObject,
+  uploadCanvasImage,
 } from '../../lib/queries';
 import { emptyTable, serializeTable } from '../../lib/table';
+import {
+  displaySize,
+  prepareCanvasImage,
+  validateCanvasImage,
+} from '../../lib/canvasImages';
 import type { CanvasObject, CanvasObjectKind, User } from '../../lib/types';
 import { CanvasTable } from './CanvasTable';
 
@@ -282,6 +288,80 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
     } catch (e) {
       onToast(e instanceof Error ? e.message : 'Could not duplicate', 'error');
     }
+  };
+
+  /** Drops an image onto the board at a world position. */
+  const addImage = useCallback(
+    async (file: File | Blob, at?: { x: number; y: number }) => {
+      if (!canvasId || readOnly) return;
+      const invalid = validateCanvasImage({
+        type: (file as File).type ?? '',
+        size: file.size,
+      });
+      if (invalid) {
+        onToast(invalid, 'error');
+        return;
+      }
+      try {
+        const prepared = await prepareCanvasImage(file);
+        const url = await uploadCanvasImage(canvasId, prepared.blob);
+        const size = displaySize(prepared.width, prepared.height);
+        const r = surface.current?.getBoundingClientRect();
+        const centre =
+          at ??
+          (r ? screenToWorld(r.width / 2, r.height / 2, view) : { x: 0, y: 0 });
+        const created = await createObject(
+          {
+            canvas_id: canvasId,
+            kind: 'image',
+            x: Math.round(centre.x - size.w / 2),
+            y: Math.round(centre.y - size.h / 2),
+            w: size.w,
+            h: size.h,
+            x2: null,
+            y2: null,
+            text: url,
+            color: '#ffffff',
+            z: nextZ(objectsRef.current),
+          },
+          user,
+        );
+        record({ kind: 'create', objects: [created] });
+        await reloadObjects();
+        setSelected([created.id]);
+      } catch (e) {
+        onToast(e instanceof Error ? e.message : 'Could not add that image', 'error');
+      }
+    },
+    [canvasId, readOnly, view, user, onToast, record, reloadObjects],
+  );
+
+  // Paste a screenshot straight onto the board.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (
+        e.target instanceof HTMLElement &&
+        ['INPUT', 'TEXTAREA'].includes(e.target.tagName)
+      ) {
+        return;
+      }
+      const item = [...(e.clipboardData?.items ?? [])].find((i) =>
+        i.type.startsWith('image/'),
+      );
+      const file = item?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        addImage(file);
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [addImage]);
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = [...e.dataTransfer.files].find((f) => f.type.startsWith('image/'));
+    if (file) addImage(file, toWorld(e.clientX, e.clientY));
   };
 
   // --- Pointer handling ------------------------------------------------
@@ -597,7 +677,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
 
       <div className="canvas-hint">
         Drag to pan · scroll to zoom · <strong>Shift+drag</strong> to select several ·
-        double-click to write · Ctrl+Z undo · Ctrl+D duplicate
+        double-click to write · <strong>paste or drop an image</strong> · Ctrl+Z undo ·
+        Ctrl+D duplicate
       </div>
 
       <div
@@ -608,6 +689,8 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerUp}
         onWheel={onWheel}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={onDrop}
         style={{
           backgroundSize: `${24 * view.zoom}px ${24 * view.zoom}px`,
           backgroundPosition: `${-view.x * view.zoom}px ${-view.y * view.zoom}px`,
@@ -705,9 +788,13 @@ export function CanvasView({ user, readOnly, onToast }: Props) {
               key={o.id}
               className={`canvas-object canvas-${o.kind} ${isSelected ? 'canvas-selected' : ''}`}
               style={shapeStyle}
-              onDoubleClick={() => !readOnly && o.kind !== 'table' && setEditing(o.id)}
+              onDoubleClick={() =>
+                !readOnly && o.kind !== 'table' && o.kind !== 'image' && setEditing(o.id)
+              }
             >
-              {o.kind === 'table' ? (
+              {o.kind === 'image' ? (
+                <img className="canvas-image" src={o.text} alt="" draggable={false} />
+              ) : o.kind === 'table' ? (
                 <CanvasTable
                   raw={o.text}
                   zoom={view.zoom}

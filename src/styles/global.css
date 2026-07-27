@@ -2050,6 +2050,21 @@ table.canvas-table {
   gap: 4px;
 }
 
+.canvas-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+.canvas-object.canvas-image {
+  padding: 0;
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.16);
+  border-radius: 6px;
+}
+
 .canvas-marquee {
   position: absolute;
   border: 1.5px dashed var(--accent);
