@@ -1,7 +1,7 @@
 {
   "name": "tg-vault",
   "productName": "T&G Vault",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Shared password vault for T&G Agency",
   "main": ".vite/build/main.js",
   "private": true,
