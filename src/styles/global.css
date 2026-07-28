@@ -2339,11 +2339,18 @@ table.canvas-table {
 }
 .analytics-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .analytics-dates {
+  display: flex;
   align-items: center;
   gap: 6px;
-  width: auto;
+}
+.analytics-dates .input {
+  min-width: 0;
+  width: 140px;
 }
 .analytics-stats {
   margin-bottom: 12px;

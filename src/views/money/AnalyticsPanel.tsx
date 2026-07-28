@@ -18,20 +18,15 @@ interface Props {
   currency: string;
 }
 
+/**
+ * Short day-count presets were dropped: earnings are recorded monthly, so a
+ * 7- or 30-day window mostly showed one bucket or none, which is where the
+ * confusing single-bar chart came from.
+ */
 const PRESETS: { key: RangePreset; label: string }[] = [
-  { key: 'last7', label: '7 days' },
-  { key: 'last30', label: '30 days' },
-  { key: 'last90', label: '90 days' },
   { key: 'last365', label: '12 months' },
   { key: 'ytd', label: 'Year to date' },
   { key: 'all', label: 'All time' },
-];
-
-const GRANULARITIES: { key: Granularity; label: string }[] = [
-  { key: 'day', label: 'Day' },
-  { key: 'week', label: 'Week' },
-  { key: 'month', label: 'Month' },
-  { key: 'year', label: 'Year' },
 ];
 
 const money = (n: number, currency: string) =>
@@ -101,7 +96,7 @@ export function AnalyticsPanel({ data, currency }: Props) {
         </div>
 
         {preset === 'custom' && (
-          <div className="form-row analytics-dates">
+          <div className="analytics-dates">
             <input
               className="input input-small"
               type="date"
@@ -118,41 +113,40 @@ export function AnalyticsPanel({ data, currency }: Props) {
           </div>
         )}
 
-        <div className="chip-row">
-          <button
-            className={`chip ${granularity === 'auto' ? 'chip-active' : ''}`}
-            onClick={() => setGranularity('auto')}
-            title="Pick a sensible bucket for the range"
+        <div className="analytics-right">
+          <select
+            className="input input-small"
+            value={granularity}
+            onChange={(e) =>
+              setGranularity(e.target.value as Granularity | 'auto')
+            }
+            title="How finely to group the data"
           >
-            Auto
-          </button>
-          {GRANULARITIES.map((g) => (
-            <button
-              key={g.key}
-              className={`chip ${granularity === g.key ? 'chip-active' : ''}`}
-              onClick={() => setGranularity(g.key)}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
+            <option value="auto">Auto ({sensibleGranularity(range)})</option>
+            <option value="day">By day</option>
+            <option value="week">By week</option>
+            <option value="month">By month</option>
+            <option value="year">By year</option>
+          </select>
 
-        <div className="chip-row analytics-right">
-          <button
-            className={`chip ${mode === 'total' ? 'chip-active' : ''}`}
-            onClick={() => setMode('total')}
-          >
-            Total
-          </button>
-          <button
-            className={`chip ${mode === 'creator' ? 'chip-active' : ''}`}
-            onClick={() => setMode('creator')}
-          >
-            By creator
-          </button>
+          <div className="chip-row">
+            <button
+              className={`chip ${mode === 'total' ? 'chip-active' : ''}`}
+              onClick={() => setMode('total')}
+            >
+              Total
+            </button>
+            <button
+              className={`chip ${mode === 'creator' ? 'chip-active' : ''}`}
+              onClick={() => setMode('creator')}
+            >
+              By creator
+            </button>
+          </div>
+
           <button
             className={`chip ${showTable ? 'chip-active' : ''}`}
-            onClick={() => setShowTable((s) => !s)}
+            onClick={() => setShowTable((t) => !t)}
           >
             Table
           </button>
