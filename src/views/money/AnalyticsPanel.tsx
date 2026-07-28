@@ -201,11 +201,16 @@ export function AnalyticsPanel({ data, currency, month }: Props) {
         <div className="stat-card card">
           <span className="stat-label">Average per {effective}</span>
           <span className="stat-value">{money(totals.average, currency)}</span>
-          {totals.best && (
-            <span className="delta-none">
-              best {totals.best.label} · {money(totals.best.gross, currency)}
-            </span>
-          )}
+          <span className="delta-none">
+            {totals.activePeriods > 0
+              ? `over ${totals.activePeriods} ${effective}${
+                  totals.activePeriods === 1 ? '' : 's'
+                } trading`
+              : 'nothing recorded'}
+            {totals.best && totals.best.gross > 0
+              ? ` · best ${totals.best.label} ${money(totals.best.gross, currency)}`
+              : ''}
+          </span>
         </div>
       </div>
 

@@ -236,6 +236,39 @@ describe('totalsFor', () => {
   it('handles an empty series without dividing by zero', () => {
     expect(totalsFor([])).toMatchObject({ gross: 0, average: 0, best: null });
   });
+
+  it('averages over the trading span, not the whole window', () => {
+    // Twelve months on screen, two months of actual earnings.
+    const points = aggregate(
+      [],
+      [month('b', '2026-06-01', 1000), month('b', '2026-07-01', 2000)],
+      [bella],
+      { from: '2025-08-01', to: '2026-07-31' },
+      'month',
+    );
+    expect(points).toHaveLength(12);
+    const t = totalsFor(points);
+    expect(t.activePeriods).toBe(2);
+    expect(t.average).toBe(1500); // not 3000/12 = 250
+  });
+
+  it('counts a quiet month inside the span, since that is a real zero', () => {
+    const points = aggregate(
+      [],
+      [month('b', '2026-05-01', 900), month('b', '2026-07-01', 900)],
+      [bella],
+      { from: '2026-01-01', to: '2026-07-31' },
+      'month',
+    );
+    const t = totalsFor(points);
+    expect(t.activePeriods).toBe(3); // May, June (zero), July
+    expect(t.average).toBe(600);
+  });
+
+  it('reports zero periods when nothing was earned at all', () => {
+    const points = aggregate([], [], [], { from: '2026-01-01', to: '2026-03-31' }, 'month');
+    expect(totalsFor(points)).toMatchObject({ activePeriods: 0, average: 0 });
+  });
 });
 
 describe('sensibleGranularity', () => {

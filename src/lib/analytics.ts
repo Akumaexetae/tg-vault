@@ -250,6 +250,8 @@ export interface Totals {
   creators: number;
   best: Point | null;
   average: number;
+  /** Periods the average is divided by — the operating span, not the window. */
+  activePeriods: number;
 }
 
 export function totalsFor(points: Point[]): Totals {
@@ -260,12 +262,33 @@ export function totalsFor(points: Point[]): Totals {
     (top, p) => (!top || p.gross > top.gross ? p : top),
     null,
   );
+
+  /*
+   * Average across the span you actually traded, not the whole window.
+   *
+   * Buckets are zero-filled for the chart, so dividing by every bucket in a
+   * 12-month view would divide two months of earnings by thirteen and report
+   * an average five times lower than any month you've had. A genuine quiet
+   * month INSIDE the span still counts — only the empty run before your first
+   * record and after your last is excluded.
+   */
+  let first = -1;
+  let last = -1;
+  points.forEach((p, i) => {
+    if (p.gross > 0) {
+      if (first === -1) first = i;
+      last = i;
+    }
+  });
+  const activePeriods = first === -1 ? 0 : last - first + 1;
+
   return {
     gross,
     agency,
     creators: creatorsTotal,
     best,
-    average: points.length ? round2(gross / points.length) : 0,
+    activePeriods,
+    average: activePeriods ? round2(gross / activePeriods) : 0,
   };
 }
 
