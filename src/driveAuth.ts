@@ -7,9 +7,13 @@ import path from 'node:path';
 /**
  * Google OAuth for a desktop app: PKCE with a loopback redirect.
  *
- * There is no client *secret* here on purpose — a secret shipped inside a
- * binary isn't secret, and Google's "Desktop app" client type is designed for
- * exactly this. PKCE is what actually protects the exchange.
+ * Google issues desktop clients a "secret" and their token endpoint requires
+ * it, even though their own docs acknowledge it is not confidential for
+ * installed apps — it necessarily ships with the client. PKCE is what actually
+ * protects the exchange; the secret is just a parameter Google insists on.
+ *
+ * It is stored per-machine in userData alongside the client id, never in the
+ * repository — this project is public.
  */
 
 const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
@@ -91,7 +95,10 @@ function awaitRedirect(): Promise<{ port: number; code: Promise<string> }> {
   });
 }
 
-export async function signIn(clientId: string): Promise<DriveTokens> {
+export async function signIn(
+  clientId: string,
+  clientSecret: string,
+): Promise<DriveTokens> {
   const verifier = base64url(crypto.randomBytes(32));
   const challenge = base64url(crypto.createHash('sha256').update(verifier).digest());
   const { port, code } = await awaitRedirect();
@@ -126,6 +133,7 @@ export async function signIn(clientId: string): Promise<DriveTokens> {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: clientId,
+        client_secret: clientSecret,
         code: authCode,
         code_verifier: verifier,
         grant_type: 'authorization_code',
@@ -154,7 +162,10 @@ export async function signIn(clientId: string): Promise<DriveTokens> {
   }
 }
 
-export async function refresh(clientId: string): Promise<DriveTokens | null> {
+export async function refresh(
+  clientId: string,
+  clientSecret: string,
+): Promise<DriveTokens | null> {
   const current = loadTokens();
   if (!current?.refresh_token) return null;
 
@@ -163,6 +174,7 @@ export async function refresh(clientId: string): Promise<DriveTokens | null> {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: current.refresh_token,
       grant_type: 'refresh_token',
     }),

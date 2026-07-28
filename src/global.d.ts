@@ -28,7 +28,7 @@ declare global {
       restartForUpdate: () => Promise<void>;
       onUpdateReady: (callback: () => void) => void;
       driveStatus: () => Promise<{ configured: boolean; signedIn: boolean }>;
-      driveSetClientId: (clientId: string) => Promise<void>;
+      driveSetClientId: (clientId: string, clientSecret: string) => Promise<void>;
       driveSignIn: () => Promise<boolean>;
       driveSignOut: () => Promise<void>;
       driveList: (query: string) => Promise<unknown[]>;

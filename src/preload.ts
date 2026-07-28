@@ -38,8 +38,8 @@ contextBridge.exposeInMainWorld('vaultBridge', {
   },
   driveStatus: (): Promise<{ configured: boolean; signedIn: boolean }> =>
     ipcRenderer.invoke('drive:status'),
-  driveSetClientId: (clientId: string): Promise<void> =>
-    ipcRenderer.invoke('drive:setClientId', clientId),
+  driveSetClientId: (clientId: string, clientSecret: string): Promise<void> =>
+    ipcRenderer.invoke('drive:setClientId', clientId, clientSecret),
   driveSignIn: (): Promise<boolean> => ipcRenderer.invoke('drive:signIn'),
   driveSignOut: (): Promise<void> => ipcRenderer.invoke('drive:signOut'),
   driveList: (query: string): Promise<unknown[]> =>

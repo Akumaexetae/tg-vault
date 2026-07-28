@@ -25,6 +25,7 @@ export function DrivePicker({ onPick, onClose }: Props) {
     'checking',
   );
   const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
   const [trail, setTrail] = useState<Crumb[]>([ROOT]);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,11 +63,16 @@ export function DrivePicker({ onPick, onClose }: Props) {
 
   const saveClientId = async () => {
     const id = clientId.trim();
+    const secret = clientSecret.trim();
     if (!id.endsWith('.apps.googleusercontent.com')) {
-      setError('That should end in .apps.googleusercontent.com');
+      setError('The client ID should end in .apps.googleusercontent.com');
       return;
     }
-    await window.vaultBridge.driveSetClientId(id);
+    if (!secret) {
+      setError('Google requires the client secret too — copy it from the same page.');
+      return;
+    }
+    await window.vaultBridge.driveSetClientId(id, secret);
     setError('');
     await refreshStatus();
   };
@@ -110,7 +116,9 @@ export function DrivePicker({ onPick, onClose }: Props) {
                 <strong>Credentials → Create credentials → OAuth client ID</strong> →
                 type <strong>Desktop app</strong>
               </li>
-              <li>Copy the client ID and paste it below</li>
+              <li>
+                Open the client you just made and copy both values below
+              </li>
             </ol>
             <label className="form-label">Client ID</label>
             <input
@@ -119,9 +127,17 @@ export function DrivePicker({ onPick, onClose }: Props) {
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
             />
+            <label className="form-label">Client secret</label>
+            <input
+              className="input"
+              placeholder="GOCSPX-…"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+            />
             <p className="connect-hint photo-hint">
-              Not a secret — Google's desktop flow uses PKCE rather than a client
-              secret, which is why none is asked for.
+              Google calls this a secret, but for desktop apps it necessarily
+              ships with the client — their own docs say as much. PKCE is what
+              actually protects the sign-in. Kept on this PC, never in the repo.
             </p>
             {error && <div className="form-error">{error}</div>}
             <div className="modal-actions">

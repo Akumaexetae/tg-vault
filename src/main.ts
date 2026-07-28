@@ -264,28 +264,44 @@ ipcMain.handle('login:logout', async (_event, id: string) => {
 // but it is per-installation config, so it lives in userData rather than code.
 const driveConfigPath = () => path.join(app.getPath('userData'), 'drive-config.json');
 
-const readClientId = (): string | null => {
+interface DriveConfig {
+  clientId?: string;
+  clientSecret?: string;
+}
+
+const readDriveConfig = (): DriveConfig => {
   try {
-    return (JSON.parse(fs.readFileSync(driveConfigPath(), 'utf-8')) as { clientId?: string })
-      .clientId ?? null;
+    return JSON.parse(fs.readFileSync(driveConfigPath(), 'utf-8')) as DriveConfig;
   } catch {
-    return null;
+    return {};
   }
 };
 
-ipcMain.handle('drive:status', () => ({
-  configured: !!readClientId(),
-  signedIn: !!loadTokens(),
-}));
-
-ipcMain.handle('drive:setClientId', (_event, clientId: string) => {
-  fs.writeFileSync(driveConfigPath(), JSON.stringify({ clientId }), 'utf-8');
+ipcMain.handle('drive:status', () => {
+  const config = readDriveConfig();
+  return {
+    configured: !!config.clientId && !!config.clientSecret,
+    signedIn: !!loadTokens(),
+  };
 });
 
+ipcMain.handle(
+  'drive:setClientId',
+  (_event, clientId: string, clientSecret: string) => {
+    fs.writeFileSync(
+      driveConfigPath(),
+      JSON.stringify({ clientId, clientSecret }),
+      'utf-8',
+    );
+  },
+);
+
 ipcMain.handle('drive:signIn', async () => {
-  const clientId = readClientId();
-  if (!clientId) throw new Error('Add your Google client ID first.');
-  await signIn(clientId);
+  const { clientId, clientSecret } = readDriveConfig();
+  if (!clientId || !clientSecret) {
+    throw new Error('Add your Google client ID and secret first.');
+  }
+  await signIn(clientId, clientSecret);
   return true;
 });
 
@@ -295,12 +311,12 @@ ipcMain.handle('drive:signOut', () => {
 
 /** Valid access token, refreshing when it's close to expiry. */
 async function driveToken(): Promise<string> {
-  const clientId = readClientId();
-  if (!clientId) throw new Error('Google Drive is not set up yet.');
+  const { clientId, clientSecret } = readDriveConfig();
+  if (!clientId || !clientSecret) throw new Error('Google Drive is not set up yet.');
   const current = loadTokens();
   if (!current) throw new Error('Sign in to Google Drive first.');
   if (Date.now() < current.expires_at - 60_000) return current.access_token;
-  const refreshed = await refresh(clientId);
+  const refreshed = await refresh(clientId, clientSecret);
   if (!refreshed) throw new Error('Your Google sign-in expired — sign in again.');
   return refreshed.access_token;
 }
