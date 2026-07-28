@@ -109,6 +109,60 @@ export function previousRange(range: DateRange): DateRange {
   return { from: iso(prevFrom), to: iso(prevTo) };
 }
 
+/**
+ * The span the data actually covers, so "all time" doesn't mean 1970.
+ * Null when there is no data at all.
+ */
+export function dataRange(
+  daily: CreatorDaily[],
+  monthly: CreatorEarning[],
+  now: Date = new Date(),
+): DateRange | null {
+  const dates = [
+    ...daily.map((d) => d.day.slice(0, 10)),
+    ...monthly.map((m) => m.month.slice(0, 10)),
+  ];
+  if (dates.length === 0) return null;
+  return { from: dates.reduce((a, b) => (a < b ? a : b)), to: iso(now) };
+}
+
+const MAX_BUCKETS = 400;
+
+/**
+ * Every bucket in the range, including empty ones — a month you earned
+ * nothing in is a real zero, not a gap to be closed up.
+ *
+ * Capped: a wide range at day granularity would otherwise generate thousands
+ * of buckets and freeze the chart. Past the cap the caller should coarsen.
+ */
+export function bucketsInRange(
+  range: DateRange,
+  granularity: Granularity,
+): string[] {
+  const keys: string[] = [];
+  const cursor = new Date(`${bucketKey(range.from, granularity)}T00:00:00Z`);
+  const end = new Date(`${range.to}T00:00:00Z`);
+
+  while (cursor <= end && keys.length < MAX_BUCKETS) {
+    keys.push(iso(cursor));
+    switch (granularity) {
+      case 'day':
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+        break;
+      case 'week':
+        cursor.setUTCDate(cursor.getUTCDate() + 7);
+        break;
+      case 'month':
+        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+        break;
+      case 'year':
+        cursor.setUTCFullYear(cursor.getUTCFullYear() + 1);
+        break;
+    }
+  }
+  return keys;
+}
+
 // --- Aggregation ----------------------------------------------------------
 
 /**
@@ -132,6 +186,20 @@ export function aggregate(
   const shareOf = new Map(creators.map((c) => [c.id, c.revenue_share]));
   const covered = monthsCoveredByDaily(daily);
   const buckets = new Map<string, Point>();
+
+  // Seed every bucket in the range so quiet periods read as zero rather than
+  // disappearing and making the line look continuous when it isn't.
+  for (const key of bucketsInRange(range, granularity)) {
+    buckets.set(key, {
+      key,
+      label: bucketLabel(key, granularity),
+      gross: 0,
+      agency: 0,
+      creators: 0,
+      byCreator: {},
+      approximate: false,
+    });
+  }
 
   const add = (
     date: string,

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   aggregate,
+  dataRange,
   presetRange,
   previousRange,
   sensibleGranularity,
@@ -43,7 +44,18 @@ export function AnalyticsPanel({ data, currency }: Props) {
   const [mode, setMode] = useState<'total' | 'creator'>('total');
   const [showTable, setShowTable] = useState(false);
 
-  const range = preset === 'custom' ? custom : presetRange(preset);
+  // "All time" means the span the data covers, not since 1970 — otherwise
+  // every empty bucket back to the Nixon administration gets drawn.
+  const covered = useMemo(
+    () => dataRange(data.daily, data.earnings),
+    [data.daily, data.earnings],
+  );
+  const range =
+    preset === 'custom'
+      ? custom
+      : preset === 'all'
+        ? (covered ?? presetRange('last30'))
+        : presetRange(preset);
   const effective =
     granularity === 'auto' ? sensibleGranularity(range) : granularity;
 

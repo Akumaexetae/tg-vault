@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   aggregate,
   bucketKey,
+  bucketsInRange,
+  dataRange,
   bucketLabel,
   presetRange,
   previousRange,
@@ -39,7 +41,10 @@ const month = (creator_id: string, m: string, gross: number): CreatorEarning => 
   updated_by: 'Tyler',
 });
 
-const ALL = { from: '1970-01-01', to: '2099-12-31' };
+// Ranges are now seeded with every bucket, so fixtures use real windows
+// rather than a catch-all — a 1970→2099 span would zero-fill 400 buckets.
+const JULY = { from: '2026-07-01', to: '2026-07-31' };
+const JUN_JUL = { from: '2026-06-01', to: '2026-07-31' };
 
 describe('weekStart', () => {
   it('returns the Monday of that week', () => {
@@ -98,7 +103,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-27', 100), day('b', '2026-07-28', 50)],
       [],
       [bella],
-      ALL,
+      { from: '2026-07-27', to: '2026-07-28' },
       'day',
     );
     expect(points).toHaveLength(2);
@@ -110,7 +115,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-27', 100), day('b', '2026-07-29', 50)],
       [],
       [bella],
-      ALL,
+      { from: '2026-07-27', to: '2026-07-29' },
       'week',
     );
     expect(points).toHaveLength(1);
@@ -123,7 +128,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-10', 400), day('b', '2026-07-20', 600)],
       [month('b', '2026-07-01', 1000)],
       [bella],
-      ALL,
+      JULY,
       'month',
     );
     expect(points).toHaveLength(1);
@@ -132,7 +137,13 @@ describe('aggregate', () => {
   });
 
   it('falls back to the monthly figure where there is no daily detail', () => {
-    const points = aggregate([], [month('b', '2026-06-01', 800)], [bella], ALL, 'month');
+    const points = aggregate(
+      [],
+      [month('b', '2026-06-01', 800)],
+      [bella],
+      { from: '2026-06-01', to: '2026-06-30' },
+      'month',
+    );
     expect(points[0].gross).toBe(800);
     expect(points[0].approximate).toBe(true);
   });
@@ -142,7 +153,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-10', 400)],
       [month('b', '2026-06-01', 800), month('b', '2026-07-01', 999)],
       [bella],
-      ALL,
+      JUN_JUL,
       'month',
     );
     expect(points.map((p) => p.gross)).toEqual([800, 400]);
@@ -154,7 +165,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-10', 400)],
       [month('b', '2026-07-01', 999), month('m', '2026-07-01', 200)],
       [bella, mia],
-      ALL,
+      JULY,
       'month',
     );
     expect(points).toHaveLength(1);
@@ -167,7 +178,7 @@ describe('aggregate', () => {
       [day('b', '2026-07-10', 100), day('m', '2026-07-10', 100)],
       [],
       [bella, mia],
-      ALL,
+      { from: '2026-07-10', to: '2026-07-10' },
       'day',
     );
     expect(points[0].agency).toBe(140); // 90 + 50
@@ -182,8 +193,10 @@ describe('aggregate', () => {
       { from: '2026-07-15', to: '2026-07-31' },
       'day',
     );
-    expect(points).toHaveLength(1);
-    expect(points[0].gross).toBe(20);
+    // Every day in the window is present; only the 20th carries money.
+    const earning = points.filter((p) => p.gross > 0);
+    expect(earning).toHaveLength(1);
+    expect(earning[0]).toMatchObject({ key: '2026-07-20', gross: 20 });
   });
 
   it('includes a month that only partly overlaps the range', () => {
@@ -194,11 +207,13 @@ describe('aggregate', () => {
       { from: '2026-07-20', to: '2026-08-05' },
       'month',
     );
-    expect(points).toHaveLength(1);
+    expect(points.filter((p) => p.gross > 0)).toHaveLength(1);
   });
 
   it('returns nothing rather than throwing when there is no data', () => {
-    expect(aggregate([], [], [], ALL, 'month')).toEqual([]);
+    const points = aggregate([], [], [], JUN_JUL, 'month');
+    expect(points).toHaveLength(2);
+    expect(points.every((p) => p.gross === 0)).toBe(true);
   });
 });
 
@@ -208,7 +223,7 @@ describe('totalsFor', () => {
       [day('b', '2026-07-27', 100), day('b', '2026-07-28', 300)],
       [],
       [bella],
-      ALL,
+      { from: '2026-07-27', to: '2026-07-28' },
       'day',
     );
     const t = totalsFor(points);
@@ -229,5 +244,77 @@ describe('sensibleGranularity', () => {
     expect(sensibleGranularity({ from: '2026-05-01', to: '2026-07-29' })).toBe('week');
     expect(sensibleGranularity({ from: '2025-01-01', to: '2026-07-29' })).toBe('month');
     expect(sensibleGranularity({ from: '2015-01-01', to: '2026-07-29' })).toBe('year');
+  });
+});
+
+describe('bucketsInRange', () => {
+  it('lists every month in the range, including empty ones', () => {
+    expect(bucketsInRange({ from: '2026-05-01', to: '2026-07-15' }, 'month')).toEqual([
+      '2026-05-01',
+      '2026-06-01',
+      '2026-07-01',
+    ]);
+  });
+
+  it('lists every day', () => {
+    expect(bucketsInRange({ from: '2026-07-01', to: '2026-07-04' }, 'day')).toEqual([
+      '2026-07-01',
+      '2026-07-02',
+      '2026-07-03',
+      '2026-07-04',
+    ]);
+  });
+
+  it('steps weeks from the Monday of the first week', () => {
+    const weeks = bucketsInRange({ from: '2026-07-01', to: '2026-07-20' }, 'week');
+    expect(weeks[0]).toBe('2026-06-29');
+    expect(weeks[1]).toBe('2026-07-06');
+  });
+
+  it('caps runaway ranges rather than generating thousands of buckets', () => {
+    const many = bucketsInRange({ from: '1970-01-01', to: '2026-07-28' }, 'day');
+    expect(many.length).toBeLessThanOrEqual(400);
+  });
+});
+
+describe('dataRange', () => {
+  const now = new Date('2026-07-28T00:00:00Z');
+
+  it('spans the earliest record to today', () => {
+    const r = dataRange(
+      [day('b', '2026-05-10', 10)],
+      [month('b', '2026-03-01', 10)],
+      now,
+    );
+    expect(r).toEqual({ from: '2026-03-01', to: '2026-07-28' });
+  });
+
+  it('is null when there is nothing recorded', () => {
+    expect(dataRange([], [], now)).toBeNull();
+  });
+});
+
+describe('aggregate — empty buckets', () => {
+  it('fills quiet months with zero rather than dropping them', () => {
+    const points = aggregate(
+      [],
+      [month('b', '2026-05-01', 100), month('b', '2026-07-01', 300)],
+      [bella],
+      { from: '2026-05-01', to: '2026-07-31' },
+      'month',
+    );
+    expect(points.map((p) => p.gross)).toEqual([100, 0, 300]);
+  });
+
+  it('does not mark an empty bucket as approximate — it has no source', () => {
+    const points = aggregate(
+      [],
+      [month('b', '2026-05-01', 100)],
+      [bella],
+      { from: '2026-05-01', to: '2026-06-30' },
+      'month',
+    );
+    expect(points[1].gross).toBe(0);
+    expect(points[1].approximate).toBe(false);
   });
 });
