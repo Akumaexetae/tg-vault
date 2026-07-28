@@ -1,9 +1,9 @@
 import { CreatorAvatar } from '../components/CreatorAvatar';
 import { KeyIcon, WarningIcon } from '../components/icons';
 import { healthReport } from '../lib/health';
+import { buildReminders } from '../lib/reminders';
 import {
   agencySeries,
-  creatorsMissingEarnings,
   grossByCreator,
   monthDelta,
   monthsAgo,
@@ -58,7 +58,7 @@ export function HomeView({
   const byCreator = grossByCreator(data.earnings, thisMonth);
   const creatorById = new Map(data.creators.map((c) => [c.id, c]));
 
-  const missing = creatorsMissingEarnings(data.creators, data.earnings, thisMonth);
+  const reminders = buildReminders(data.creators, data.earnings, thisMonth);
   const health = healthReport(data.entries);
   const healthIssues = new Set(
     [...health.weak, ...health.reused, ...health.old].map((e) => e.id),
@@ -156,24 +156,42 @@ export function HomeView({
 
               <h2>Needs attention</h2>
               <div className="card activity-card">
-                {missing.length === 0 && healthIssues === 0 && (
+                {reminders.length === 0 && healthIssues === 0 && (
                   <p className="muted">Nothing outstanding.</p>
                 )}
-                {missing.map((c) => (
-                  <div key={c.id} className="attention-row">
-                    <CreatorAvatar creator={c} size={22} />
-                    <span>
-                      <strong>{c.name}</strong> — no earnings recorded this month
-                    </span>
-                    <button
-                      className="btn btn-tiny"
-                      disabled={readOnly}
-                      onClick={() => onRecordEarnings(c)}
+                {reminders.slice(0, 8).map((r, i) => {
+                  const creator = data.creators.find((c) => c.id === r.creatorId);
+                  return (
+                    <div
+                      key={`${r.kind}-${r.creatorId}-${i}`}
+                      className="attention-row"
                     >
-                      Record
-                    </button>
-                  </div>
-                ))}
+                      {creator && <CreatorAvatar creator={creator} size={22} />}
+                      <span>{r.message}</span>
+                      {creator && (r.kind === 'missing-earnings' || r.kind === 'unpaid') && (
+                        <button
+                          className="btn btn-tiny"
+                          disabled={readOnly}
+                          onClick={() =>
+                            r.kind === 'unpaid'
+                              ? onOpenCreator(creator)
+                              : onRecordEarnings(creator)
+                          }
+                        >
+                          {r.kind === 'unpaid' ? 'Open' : 'Record'}
+                        </button>
+                      )}
+                      {creator && r.kind !== 'missing-earnings' && r.kind !== 'unpaid' && (
+                        <button
+                          className="btn btn-tiny"
+                          onClick={() => onOpenCreator(creator)}
+                        >
+                          Fix
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
                 {healthIssues > 0 && (
                   <div className="attention-row">
                     <KeyIcon size={18} className="attention-icon" />

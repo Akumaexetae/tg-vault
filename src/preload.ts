@@ -46,4 +46,14 @@ contextBridge.exposeInMainWorld('vaultBridge', {
     ipcRenderer.invoke('drive:list', query),
   driveThumbnail: (fileId: string, link: string): Promise<string | null> =>
     ipcRenderer.invoke('drive:thumbnail', fileId, link),
+  chooseBackupFolder: (): Promise<string | null> =>
+    ipcRenderer.invoke('backup:choose-folder'),
+  listBackups: (folder: string): Promise<string[]> =>
+    ipcRenderer.invoke('backup:list', folder),
+  runAutoBackup: (opts: {
+    folder: string;
+    filename: string;
+    contents: string;
+    prune: string[];
+  }): Promise<boolean> => ipcRenderer.invoke('backup:auto-run', opts),
 });

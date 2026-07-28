@@ -2284,6 +2284,48 @@ table.canvas-table {
   margin-left: auto;
 }
 
+/* --- Settings ------------------------------------------------------------ */
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 660px;
+}
+.settings-card {
+  padding: 16px 18px;
+}
+.settings-card h2 {
+  margin-bottom: 6px;
+}
+.settings-lead {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.settings-row input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.settings-facts {
+  display: flex;
+  gap: 18px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  color: var(--ink-soft);
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

@@ -2,12 +2,18 @@ import { useState } from 'react';
 import { CreatorAvatar } from '../../components/CreatorAvatar';
 import { splitEarning } from '../../lib/creators/earnings';
 import { monthsAgo, monthTotals } from '../../lib/money';
+import {
+  accountingFilename,
+  accountingRows,
+  buildAccountingCsv,
+} from '../../lib/accounting';
 import type { Creator, CreatorEarning, VaultData } from '../../lib/types';
 
 interface Props {
   data: VaultData;
   readOnly: boolean;
   onImport: () => void;
+  onExportAccounts: (filename: string, csv: string) => void;
   onRecord: (creator: Creator) => void;
   onTogglePaid: (earning: CreatorEarning, creator: Creator, paid: boolean) => void;
   onOpenCreator: (creator: Creator) => void;
@@ -20,6 +26,7 @@ export function MoneyView({
   data,
   readOnly,
   onImport,
+  onExportAccounts,
   onRecord,
   onTogglePaid,
   onOpenCreator,
@@ -65,6 +72,23 @@ export function MoneyView({
               ›
             </button>
           </div>
+          <button
+            className="btn"
+            title="Every month, per creator, with the splits — for your accountant"
+            onClick={() => {
+              const rows = accountingRows(data.earnings, data.creators);
+              const months = rows.map((r) => r.month);
+              onExportAccounts(
+                accountingFilename(
+                  months[0] ?? 'start',
+                  months[months.length - 1] ?? 'end',
+                ),
+                buildAccountingCsv(rows),
+              );
+            }}
+          >
+            Accountant export
+          </button>
           <button className="btn btn-primary" disabled={readOnly} onClick={onImport}>
             Import statement
           </button>

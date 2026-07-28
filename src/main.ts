@@ -378,6 +378,49 @@ ipcMain.handle('drive:thumbnail', async (_event, fileId: string, link: string) =
   }
 });
 
+// --- Automatic backups -----------------------------------------------------
+ipcMain.handle('backup:choose-folder', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Where should backups go?',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return canceled ? null : (filePaths[0] ?? null);
+});
+
+/**
+ * Writes a backup and prunes old ones.
+ *
+ * Only files matching our own naming pattern are ever deleted — the chosen
+ * folder may be a normal folder of the user's, and removing anything we
+ * didn't write would be unforgivable.
+ */
+ipcMain.handle(
+  'backup:auto-run',
+  async (
+    _event,
+    opts: { folder: string; filename: string; contents: string; prune: string[] },
+  ) => {
+    fs.mkdirSync(opts.folder, { recursive: true });
+    fs.writeFileSync(path.join(opts.folder, opts.filename), opts.contents, 'utf-8');
+    for (const stale of opts.prune) {
+      try {
+        fs.unlinkSync(path.join(opts.folder, stale));
+      } catch {
+        /* already gone — not worth failing the backup over */
+      }
+    }
+    return true;
+  },
+);
+
+ipcMain.handle('backup:list', (_event, folder: string) => {
+  try {
+    return fs.readdirSync(folder);
+  } catch {
+    return [];
+  }
+});
+
 // --- Backup export ---------------------------------------------------------
 ipcMain.handle(
   'backup:save',

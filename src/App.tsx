@@ -10,7 +10,14 @@ import { IdentityScreen } from './components/IdentityScreen';
 import { ServiceIcon } from './components/ServiceIcon';
 import { ToastProvider, useToast } from './components/Toast';
 import { useVault } from './hooks/useVault';
-import { backupFilename, buildBackup, buildCsv } from './lib/backup';
+import { backupFilename, buildBackup, buildCsv, buildCreatorsCsv } from './lib/backup';
+import {
+  DEFAULT_BACKUP,
+  autoBackupName,
+  isBackupDue,
+  prunableBackups,
+  type BackupSettings,
+} from './lib/autoBackup';
 import { groupIdOf, serviceGroups } from './lib/groups';
 import {
   canDeleteCreator,
@@ -62,6 +69,7 @@ import type {
   User,
 } from './lib/types';
 import { ActivityView } from './views/ActivityView';
+import { SettingsView } from './views/SettingsView';
 import { CreatorsView } from './views/CreatorsView';
 import { EntryListView } from './views/EntryListView';
 import { HomeView } from './views/HomeView';
@@ -91,6 +99,7 @@ type Route =
   | { view: 'notes' }
   | { view: 'health' }
   | { view: 'activity' }
+  | { view: 'settings' }
   | { view: 'service'; id: string }
   | { view: 'creator'; id: string };
 
@@ -223,6 +232,31 @@ function VaultApp({
     window.vaultBridge?.appVersion().then(setVersion).catch(() => {});
   }, []);
 
+  // Run a scheduled backup shortly after load, once data is present. Delayed so
+  // it never competes with the first render.
+  useEffect(() => {
+    if (!data) return;
+    const settings = loadPreference<BackupSettings>('backup', DEFAULT_BACKUP);
+    if (!isBackupDue(settings)) return;
+    const timer = setTimeout(async () => {
+      try {
+        const now = new Date().toISOString();
+        const existing = await window.vaultBridge.listBackups(settings.folder as string);
+        await window.vaultBridge.runAutoBackup({
+          folder: settings.folder as string,
+          filename: autoBackupName(now),
+          contents: JSON.stringify(buildBackup(data, now), null, 2),
+          prune: prunableBackups([...existing, autoBackupName(now)], settings.keep),
+        });
+        savePreference('backup', { ...settings, lastAt: now });
+        toast('Backup saved');
+      } catch {
+        // A failed backup must never interrupt the app; Settings shows the state.
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [data, toast]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -314,6 +348,20 @@ function VaultApp({
     } catch {
       toast('Delete failed — are you online?', 'error');
     }
+  };
+
+  /** Writes a dated backup to the chosen folder and prunes old ones. */
+  const runAutoBackup = async () => {
+    const settings = loadPreference<BackupSettings>('backup', DEFAULT_BACKUP);
+    if (!settings.folder) throw new Error('Choose a backup folder first.');
+    const now = new Date().toISOString();
+    const existing = await window.vaultBridge.listBackups(settings.folder);
+    await window.vaultBridge.runAutoBackup({
+      folder: settings.folder,
+      filename: autoBackupName(now),
+      contents: JSON.stringify(buildBackup(data, now), null, 2),
+      prune: prunableBackups([...existing, autoBackupName(now)], settings.keep),
+    });
   };
 
   const handleExport = async (format: 'json' | 'csv') => {
@@ -553,6 +601,14 @@ function VaultApp({
         data={data}
         readOnly={readOnly}
         onImport={() => setImportOpen(true)}
+        onExportAccounts={async (filename, csv) => {
+          try {
+            const saved = await window.vaultBridge?.saveBackup({ filename, contents: csv });
+            if (saved) toast('Accountant export saved');
+          } catch {
+            toast('Could not save the export', 'error');
+          }
+        }}
         onRecord={setEarningsFor}
         onTogglePaid={handleTogglePaid}
         onOpenCreator={(c) => {
@@ -762,6 +818,15 @@ function VaultApp({
         onTogglePin={handleTogglePin}
       />
     );
+  } else if (route.view === 'settings') {
+    content = (
+      <SettingsView
+        version={version}
+        user={user}
+        onBackupNow={runAutoBackup}
+        onDisconnect={onDisconnect}
+      />
+    );
   } else {
     content = <ActivityView activity={activity} />;
   }
@@ -936,6 +1001,7 @@ function VaultApp({
 
           {navItem('Secure notes', { view: 'notes' }, on('notes'))}
           {navItem('Activity', { view: 'activity' }, on('activity'))}
+          {navItem('Settings', { view: 'settings' }, on('settings'))}
         </nav>
 
         <div className="sidebar-footer">

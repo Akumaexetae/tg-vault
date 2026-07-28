@@ -33,6 +33,14 @@ declare global {
       driveSignOut: () => Promise<void>;
       driveList: (query: string) => Promise<unknown[]>;
       driveThumbnail: (fileId: string, link: string) => Promise<string | null>;
+      chooseBackupFolder: () => Promise<string | null>;
+      listBackups: (folder: string) => Promise<string[]>;
+      runAutoBackup: (opts: {
+        folder: string;
+        filename: string;
+        contents: string;
+        prune: string[];
+      }) => Promise<boolean>;
     };
   }
 }
