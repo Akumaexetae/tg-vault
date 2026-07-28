@@ -14,6 +14,7 @@ import { DriveTile } from './DriveTile';
 interface Props {
   creator: Creator;
   onSetup: () => void;
+  onChooseFolder: () => void;
 }
 
 interface Crumb {
@@ -23,7 +24,7 @@ interface Crumb {
 
 type Status = 'checking' | 'setup' | 'signin' | 'ready';
 
-export function DriveView({ creator, onSetup }: Props) {
+export function DriveView({ creator, onSetup, onChooseFolder }: Props) {
   const [status, setStatus] = useState<Status>('checking');
   const [trail, setTrail] = useState<Crumb[]>([]);
   const [files, setFiles] = useState<DriveFile[]>([]);
@@ -92,9 +93,9 @@ export function DriveView({ creator, onSetup }: Props) {
         </div>
         <div className="empty-state card">
           <p>No Drive folder linked for {creator.name}.</p>
-          <p className="muted">
-            Add one under Edit creator — paste a folder link or use Browse.
-          </p>
+          <button className="btn btn-primary" onClick={onChooseFolder}>
+            Choose a folder
+          </button>
         </div>
       </div>
     );
@@ -140,6 +141,9 @@ export function DriveView({ creator, onSetup }: Props) {
                 onClick={() => setLayout('list')}
               >
                 List
+              </button>
+              <button className="btn" onClick={onChooseFolder}>
+                Change folder
               </button>
               <button
                 className="btn"

@@ -171,7 +171,9 @@ function VaultApp({
   const [importOpen, setImportOpen] = useState(false);
   const [cardModal, setCardModal] = useState<BoardCard | { lane: Lane } | null>(null);
   const [planningTab, setPlanningTab] = useState<'board' | 'canvas'>('board');
-  const [driveSetup, setDriveSetup] = useState(false);
+  // Either 'setup' (configure Drive, nothing to assign) or a creator whose
+  // folder we're choosing.
+  const [drivePicker, setDrivePicker] = useState<Creator | 'setup' | null>(null);
   // Sidebar groups remember their open/closed state per install.
   const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean; drive: boolean }>(
     () => {
@@ -562,7 +564,11 @@ function VaultApp({
   } else if (route.view === 'drive') {
     const creator = creators.find((c) => c.id === route.id);
     content = creator ? (
-      <DriveView creator={creator} onSetup={() => setDriveSetup(true)} />
+      <DriveView
+        creator={creator}
+        onSetup={() => setDrivePicker('setup')}
+        onChooseFolder={() => setDrivePicker(creator)}
+      />
     ) : (
       <div className="view">
         <div className="empty-state card">
@@ -1057,10 +1063,26 @@ function VaultApp({
         />
       )}
 
-      {driveSetup && (
+      {drivePicker && (
         <DrivePicker
-          onPick={() => setDriveSetup(false)}
-          onClose={() => setDriveSetup(false)}
+          assignTo={drivePicker === 'setup' ? null : drivePicker}
+          onPick={async (file) => {
+            const target = drivePicker;
+            setDrivePicker(null);
+            if (target === 'setup' || !target) return;
+            try {
+              await updateCreator(
+                target,
+                { ...toInput(target), drive_folder_url: file.webViewLink ?? null },
+                user,
+              );
+              await refresh();
+              toast(`Folder linked to ${target.name}`);
+            } catch (e) {
+              toast(e instanceof Error ? e.message : 'Could not save that', 'error');
+            }
+          }}
+          onClose={() => setDrivePicker(null)}
         />
       )}
 

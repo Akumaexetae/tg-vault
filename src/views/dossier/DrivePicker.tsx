@@ -9,6 +9,13 @@ import {
 } from '../../lib/drive';
 
 interface Props {
+  /**
+   * The creator whose folder is being chosen. Null means the picker was
+   * opened purely to configure Drive — there is nothing to assign, so it
+   * closes as soon as setup and sign-in are done rather than showing a
+   * browser whose selection would go nowhere.
+   */
+  assignTo?: { id: string; name: string } | null;
   onPick: (file: DriveFile) => void;
   onClose: () => void;
 }
@@ -20,7 +27,7 @@ interface Crumb {
 
 const ROOT: Crumb = { id: 'root', name: 'My Drive' };
 
-export function DrivePicker({ onPick, onClose }: Props) {
+export function DrivePicker({ assignTo, onPick, onClose }: Props) {
   const [status, setStatus] = useState<'checking' | 'setup' | 'signin' | 'ready'>(
     'checking',
   );
@@ -58,8 +65,14 @@ export function DrivePicker({ onPick, onClose }: Props) {
   }, []);
 
   useEffect(() => {
+    // Setup-only: once Drive is configured and signed in, there's nothing more
+    // to do here.
+    if (status === 'ready' && assignTo === null) {
+      onClose();
+      return;
+    }
     if (status === 'ready') load(here.id);
-  }, [status, here.id, load]);
+  }, [status, here.id, load, assignTo, onClose]);
 
   const saveClientId = async () => {
     const id = clientId.trim();
@@ -90,7 +103,9 @@ export function DrivePicker({ onPick, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Choose from Google Drive</h2>
+        <h2>
+          {assignTo ? `Drive folder for ${assignTo.name}` : 'Google Drive'}
+        </h2>
 
         {status === 'checking' && <p className="muted">Checking…</p>}
 
