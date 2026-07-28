@@ -165,15 +165,54 @@ export function bucketsInRange(
 
 // --- Aggregation ----------------------------------------------------------
 
+const monthKeyOf = (creatorId: string, date: string) =>
+  `${creatorId}|${date.slice(0, 7)}`;
+
 /**
- * Months (per creator) that have daily detail.
+ * How to reconcile the two sources for the same money.
  *
- * Used to decide precedence: where daily rows exist they are the truth, and
- * the monthly row for that creator+month is skipped. Counting both would
- * double the revenue — the single most dangerous bug in this file.
+ * `creator_earnings` (monthly) is canonical — it is what payouts, Home, the
+ * accountant export and the reminders all read. `creator_daily` exists only to
+ * give shape *within* a month.
+ *
+ * So where both exist, the daily values are SCALED to sum to the monthly
+ * figure rather than replacing it. Without this, editing a month by hand after
+ * importing a statement left the chart showing one number and every other
+ * screen showing another.
+ *
+ * Returns a multiplier per creator+month, and the set of months whose monthly
+ * row is therefore already represented by daily rows.
  */
-function monthsCoveredByDaily(daily: CreatorDaily[]): Set<string> {
-  return new Set(daily.map((d) => `${d.creator_id}|${d.day.slice(0, 7)}`));
+function reconcile(
+  daily: CreatorDaily[],
+  monthly: CreatorEarning[],
+): { scale: Map<string, number>; handledByDaily: Set<string> } {
+  const dailySums = new Map<string, number>();
+  for (const d of daily) {
+    const key = monthKeyOf(d.creator_id, d.day);
+    dailySums.set(key, (dailySums.get(key) ?? 0) + d.gross);
+  }
+
+  const scale = new Map<string, number>();
+  const handledByDaily = new Set<string>();
+
+  for (const [key, sum] of dailySums) {
+    // Daily with no monthly counterpart stands on its own.
+    if (sum > 0) handledByDaily.add(key);
+  }
+
+  for (const m of monthly) {
+    const key = monthKeyOf(m.creator_id, m.month);
+    const sum = dailySums.get(key);
+    if (sum === undefined || sum <= 0) {
+      // No usable daily detail — the monthly figure is used directly.
+      handledByDaily.delete(key);
+      continue;
+    }
+    scale.set(key, m.gross / sum);
+  }
+
+  return { scale, handledByDaily };
 }
 
 export function aggregate(
@@ -182,9 +221,21 @@ export function aggregate(
   creators: Creator[],
   range: DateRange,
   granularity: Granularity,
+  /*
+   * Only rows in this currency are counted. Money and the accountant export
+   * both keep their totals per currency and never add EUR to USD; the chart
+   * has to do the same, or it would sum both and label the result with one.
+   * Omit to count everything (correct only while a single currency is in use).
+   */
+  currency?: string,
 ): Point[] {
+  const inScope = (rowCurrency: string) =>
+    !currency || (rowCurrency || 'EUR') === currency;
+  daily = daily.filter((d) => inScope(d.currency));
+  monthly = monthly.filter((m) => inScope(m.currency));
+
   const shareOf = new Map(creators.map((c) => [c.id, c.revenue_share]));
-  const covered = monthsCoveredByDaily(daily);
+  const { scale, handledByDaily } = reconcile(daily, monthly);
   const buckets = new Map<string, Point>();
 
   // Seed every bucket in the range so quiet periods read as zero rather than
@@ -229,11 +280,12 @@ export function aggregate(
   for (const d of daily) {
     const day = d.day.slice(0, 10);
     if (day < range.from || day > range.to) continue;
-    add(day, d.creator_id, d.gross, false);
+    const factor = scale.get(monthKeyOf(d.creator_id, d.day)) ?? 1;
+    add(day, d.creator_id, round2(d.gross * factor), false);
   }
 
   for (const m of monthly) {
-    if (covered.has(`${m.creator_id}|${m.month.slice(0, 7)}`)) continue;
+    if (handledByDaily.has(monthKeyOf(m.creator_id, m.month))) continue;
     const month = m.month.slice(0, 10);
     // A monthly figure belongs to the range if any part of its month does.
     const monthEnd = `${m.month.slice(0, 7)}-31`;

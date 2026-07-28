@@ -76,17 +76,26 @@ export function AnalyticsPanel({ data, currency, month }: Props) {
   });
 
   const points = useMemo(
-    () => aggregate(data.daily, data.earnings, data.creators, range, effective),
-    [data, range.from, range.to, effective],
+    () =>
+      aggregate(data.daily, data.earnings, data.creators, range, effective, currency),
+    [data, range.from, range.to, effective, currency],
   );
   const totals = useMemo(() => totalsFor(points), [points]);
 
   const prior = useMemo(() => {
     const prev = previousRange(range);
     return totalsFor(
-      aggregate(data.daily, data.earnings, data.creators, prev, effective),
+      aggregate(data.daily, data.earnings, data.creators, prev, effective, currency),
     );
-  }, [data, range.from, range.to, effective]);
+  }, [data, range.from, range.to, effective, currency]);
+
+  // Anything in another currency is excluded rather than silently added in.
+  const otherCurrencies = useMemo(() => {
+    const seen = new Set(
+      data.earnings.map((e) => e.currency || 'EUR').filter((c) => c !== currency),
+    );
+    return [...seen];
+  }, [data.earnings, currency]);
 
   const delta =
     prior.agency > 0
@@ -221,6 +230,13 @@ export function AnalyticsPanel({ data, currency, month }: Props) {
         mode={mode}
         granularity={effective}
       />
+
+      {otherCurrencies.length > 0 && (
+        <p className="muted chart-note">
+          Showing {currency} only — {otherCurrencies.join(', ')} earnings are
+          listed separately above and are not added in here.
+        </p>
+      )}
 
       {!hasDaily && (effective === 'day' || effective === 'week') && (
         <p className="muted chart-note">

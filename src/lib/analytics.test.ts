@@ -136,6 +136,76 @@ describe('aggregate', () => {
     expect(points[0].approximate).toBe(false);
   });
 
+  it('counts only the requested currency, like Money and the export do', () => {
+    // A USD row must never be added into a total labelled EUR.
+    const eur = { ...month('b', '2026-07-01', 1000), currency: 'EUR' };
+    const usd = { ...month('m', '2026-07-01', 5000), currency: 'USD' };
+    const points = aggregate([], [eur, usd], [bella, mia], JULY, 'month', 'EUR');
+    expect(points[0].gross).toBe(1000);
+    expect(points[0].byCreator.m).toBeUndefined();
+  });
+
+  it('counts every currency when none is specified', () => {
+    const eur = { ...month('b', '2026-07-01', 1000), currency: 'EUR' };
+    const usd = { ...month('m', '2026-07-01', 500), currency: 'USD' };
+    const points = aggregate([], [eur, usd], [bella, mia], JULY, 'month');
+    expect(points[0].gross).toBe(1500);
+  });
+
+  it('scales daily detail to the monthly figure, which is canonical', () => {
+    // Monthly edited to 2000 after importing 1000 of daily detail. Every other
+    // screen reads the monthly row, so the chart must total the same.
+    const points = aggregate(
+      [day('b', '2026-07-10', 400), day('b', '2026-07-20', 600)],
+      [month('b', '2026-07-01', 2000)],
+      [bella],
+      JULY,
+      'day',
+    );
+    const total = points.reduce((n, p) => n + p.gross, 0);
+    expect(total).toBeCloseTo(2000, 2);
+    // Shape is preserved: the 20th still carries 60% of the month.
+    const twentieth = points.find((p) => p.key === '2026-07-20');
+    expect(twentieth?.gross).toBeCloseTo(1200, 2);
+  });
+
+  it('leaves daily alone when there is no monthly figure to reconcile with', () => {
+    const points = aggregate(
+      [day('b', '2026-07-10', 400)],
+      [],
+      [bella],
+      JULY,
+      'day',
+    );
+    expect(points.find((p) => p.key === '2026-07-10')?.gross).toBe(400);
+  });
+
+  it('falls back to the monthly figure when daily rows sum to nothing', () => {
+    const points = aggregate(
+      [day('b', '2026-07-10', 0)],
+      [month('b', '2026-07-01', 500)],
+      [bella],
+      JULY,
+      'month',
+    );
+    expect(points[0].gross).toBe(500);
+  });
+
+  it('agrees with the monthly total that every other screen reads', () => {
+    // The whole point of reconciliation: Money, Home and the export all read
+    // creator_earnings, so the chart's month must equal it exactly.
+    const monthly = [month('b', '2026-07-01', 1234.56), month('m', '2026-07-01', 765.44)];
+    const points = aggregate(
+      [day('b', '2026-07-05', 900), day('b', '2026-07-25', 100)],
+      monthly,
+      [bella, mia],
+      JULY,
+      'month',
+    );
+    const expected = monthly.reduce((n, m) => n + m.gross, 0);
+    expect(points[0].gross).toBeCloseTo(expected, 2);
+  });
+
   it('falls back to the monthly figure where there is no daily detail', () => {
     const points = aggregate(
       [],
@@ -148,7 +218,9 @@ describe('aggregate', () => {
     expect(points[0].approximate).toBe(true);
   });
 
-  it('mixes daily and monthly across different months without overlap', () => {
+  it('mixes months with and without daily detail, monthly total intact', () => {
+    // June has only a monthly figure; July has both. Both months report their
+    // monthly figure, because that is the canonical number everywhere else.
     const points = aggregate(
       [day('b', '2026-07-10', 400)],
       [month('b', '2026-06-01', 800), month('b', '2026-07-01', 999)],
@@ -156,11 +228,12 @@ describe('aggregate', () => {
       JUN_JUL,
       'month',
     );
-    expect(points.map((p) => p.gross)).toEqual([800, 400]);
+    expect(points.map((p) => p.gross)).toEqual([800, 999]);
   });
 
-  it('keeps precedence per creator, not globally', () => {
-    // Bella has daily for July; Mia does not — Mia's monthly must still count.
+  it('reconciles per creator, not globally', () => {
+    // Bella has daily detail for July, Mia does not. Both still contribute
+    // exactly their monthly figure — 999 + 200.
     const points = aggregate(
       [day('b', '2026-07-10', 400)],
       [month('b', '2026-07-01', 999), month('m', '2026-07-01', 200)],
@@ -169,8 +242,9 @@ describe('aggregate', () => {
       'month',
     );
     expect(points).toHaveLength(1);
-    expect(points[0].gross).toBe(600); // 400 + 200, never 999
-    expect(points[0].byCreator).toEqual({ b: 400, m: 200 });
+    expect(points[0].gross).toBeCloseTo(1199, 2);
+    expect(points[0].byCreator.b).toBeCloseTo(999, 2);
+    expect(points[0].byCreator.m).toBeCloseTo(200, 2);
   });
 
   it('splits each creator by her own share', () => {
