@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { CreatorAvatar } from '../../components/CreatorAvatar';
-import { splitEarning } from '../../lib/creators/earnings';
 import { monthsAgo, monthTotals } from '../../lib/money';
 import {
   accountingFilename,
@@ -9,6 +7,7 @@ import {
 } from '../../lib/accounting';
 import type { Creator, CreatorEarning, VaultData } from '../../lib/types';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { CreatorRevenuePanel } from './CreatorRevenuePanel';
 
 interface Props {
   data: VaultData;
@@ -138,68 +137,17 @@ export function MoneyView({
           </button>
         </div>
       ) : (
-        <div className="entry-list">
-          {rows.map(({ earning, creator }) => {
-            const split = splitEarning(earning.gross, creator.revenue_share);
-            const paid = !!earning.paid_at;
-            return (
-              <div key={earning.id} className="card money-row">
-                <button
-                  className="money-creator"
-                  onClick={() => onOpenCreator(creator)}
-                >
-                  <CreatorAvatar creator={creator} size={30} />
-                  <span>
-                    <strong>{creator.name}</strong>
-                    <em className="money-share">
-                      {creator.revenue_share != null
-                        ? `${creator.revenue_share}% share`
-                        : 'no share set'}
-                    </em>
-                  </span>
-                </button>
-
-                <div className="money-figure">
-                  <span className="tile-label">Gross</span>
-                  <b>{money(earning.gross, earning.currency)}</b>
-                </div>
-                <div className="money-figure">
-                  <span className="tile-label">Yours</span>
-                  <b className="stat-accent">{money(split.agency, earning.currency)}</b>
-                </div>
-                <div className="money-figure">
-                  <span className="tile-label">Hers</span>
-                  <b>{money(split.creator, earning.currency)}</b>
-                </div>
-
-                <div className="money-actions">
-                  {paid ? (
-                    <span className="pill pill-paid" title={`by ${earning.paid_by}`}>
-                      Paid
-                    </span>
-                  ) : (
-                    <span className="pill pill-unpaid">Unpaid</span>
-                  )}
-                  <button
-                    className="btn btn-tiny"
-                    disabled={readOnly}
-                    onClick={() => onTogglePaid(earning, creator, !paid)}
-                  >
-                    {paid ? 'Undo' : 'Mark paid'}
-                  </button>
-                  <button
-                    className="btn btn-tiny"
-                    disabled={readOnly}
-                    onClick={() => onRecord(creator)}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <CreatorRevenuePanel
+          data={data}
+          currency={totals[0]?.currency ?? 'EUR'}
+          month={month}
+          readOnly={readOnly}
+          onRecord={onRecord}
+          onTogglePaid={onTogglePaid}
+          onOpenCreator={onOpenCreator}
+        />
       )}
+
     </div>
   );
 }

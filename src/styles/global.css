@@ -2541,3 +2541,29 @@ table.canvas-table {
     opacity: 0;
   }
 }
+
+/* --- Per-creator revenue panel ------------------------------------------ */
+
+.creator-revenue {
+  margin-top: 26px;
+}
+.creator-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* The avatar is its own button into the dossier, so it drops the row width
+   the list version needed. */
+.creator-picker .money-creator {
+  width: auto;
+}
+.creator-picker select {
+  font-weight: 600;
+  min-width: 170px;
+}
+.creator-month-row {
+  margin-top: 14px;
+}
+.creator-month-row .money-creator {
+  cursor: default;
+}
