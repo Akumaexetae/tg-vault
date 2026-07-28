@@ -18,6 +18,7 @@ const ACCENT = '#2a78d6'; // your cut — the series that is the point
 
 const PAD = { top: 16, right: 18, bottom: 30, left: 62 };
 const HEIGHT = 300;
+const MAX_BAR = 56;
 
 interface Props {
   points: Point[];
@@ -75,10 +76,11 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
   const step = points.length > 1 ? plotW / (points.length - 1) : 0;
   const x = (i: number) => PAD.left + (points.length === 1 ? plotW / 2 : i * step);
 
-  // Bars need slots rather than points on a line.
+  // Bars need slots rather than points on a line. Capped so a handful of
+  // buckets don't become absurd slabs across the whole plot.
   const bandW = plotW / Math.max(points.length, 1);
-  const barX = (i: number) => PAD.left + i * bandW + bandW * 0.15;
-  const barW = Math.max(2, bandW * 0.7);
+  const barW = Math.max(2, Math.min(bandW * 0.62, MAX_BAR));
+  const barX = (i: number) => PAD.left + i * bandW + (bandW - barW) / 2;
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => max * f);
 
@@ -93,8 +95,28 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
 
   if (points.length === 0) {
     return (
-      <div className="card chart-card">
+      <div className="card chart-card chart-blank">
         <p className="tile-empty">Nothing recorded in this range.</p>
+      </div>
+    );
+  }
+
+  /*
+   * One period is a number, not a chart — plotting it draws a single slab that
+   * says nothing the stat cards above haven't already said. Tell the reader
+   * what would make a chart possible instead.
+   */
+  if (points.length === 1) {
+    return (
+      <div className="card chart-card chart-blank">
+        <p className="tile-empty">
+          Only <strong>{points[0].label}</strong> falls in this range — a chart
+          needs at least two periods to show anything a number can't.
+        </p>
+        <p className="muted chart-blank-hint">
+          Widen the range, switch to a coarser or finer bucket, or record
+          another month.
+        </p>
       </div>
     );
   }
