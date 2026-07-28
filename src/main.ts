@@ -309,7 +309,8 @@ ipcMain.handle('drive:list', async (_event, query: string) => {
   const token = await driveToken();
   const params = new URLSearchParams({
     q: query,
-    fields: 'files(id,name,mimeType,webViewLink,iconLink,modifiedTime)',
+    fields:
+      'files(id,name,mimeType,webViewLink,iconLink,thumbnailLink,modifiedTime,size)',
     pageSize: '200',
     orderBy: 'folder,name',
     supportsAllDrives: 'true',
@@ -325,6 +326,40 @@ ipcMain.handle('drive:list', async (_event, query: string) => {
   };
   if (!response.ok) throw new Error(body.error?.message ?? 'Drive request failed.');
   return body.files ?? [];
+});
+
+/**
+ * Drive thumbnails, fetched here rather than in an <img src>.
+ *
+ * Google's thumbnailLink needs the Authorization header — pointed at directly
+ * from the renderer it returns 403. Fetching in main and handing back a data
+ * URL also means the token never reaches the renderer.
+ */
+const thumbnailCache = new Map<string, string>();
+
+ipcMain.handle('drive:thumbnail', async (_event, fileId: string, link: string) => {
+  const cached = thumbnailCache.get(fileId);
+  if (cached) return cached;
+  try {
+    const token = await driveToken();
+    // Ask for a wider thumbnail than Drive's default 220px.
+    const url = link.replace(/=s\d+$/, '=s400');
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    const type = response.headers.get('content-type') ?? 'image/jpeg';
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const dataUrl = `data:${type};base64,${buffer.toString('base64')}`;
+    // Bounded so a large library can't grow this without limit.
+    if (thumbnailCache.size > 400) {
+      thumbnailCache.delete(thumbnailCache.keys().next().value as string);
+    }
+    thumbnailCache.set(fileId, dataUrl);
+    return dataUrl;
+  } catch {
+    return null;
+  }
 });
 
 // --- Backup export ---------------------------------------------------------

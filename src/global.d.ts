@@ -32,6 +32,7 @@ declare global {
       driveSignIn: () => Promise<boolean>;
       driveSignOut: () => Promise<void>;
       driveList: (query: string) => Promise<unknown[]>;
+      driveThumbnail: (fileId: string, link: string) => Promise<string | null>;
     };
   }
 }

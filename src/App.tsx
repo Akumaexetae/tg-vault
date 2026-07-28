@@ -70,6 +70,8 @@ import { MoneyView } from './views/money/MoneyView';
 import { BoardView } from './views/planning/BoardView';
 import { CardModal, type CardInput } from './views/planning/CardModal';
 import { CanvasView } from './views/planning/CanvasView';
+import { DriveView } from './views/drive/DriveView';
+import { DrivePicker } from './views/dossier/DrivePicker';
 import { HealthView } from './views/HealthView';
 import { NotesView } from './views/NotesView';
 import { CreatorModal, toInput } from './views/dossier/CreatorModal';
@@ -84,6 +86,7 @@ type Route =
   | { view: 'creators' }
   | { view: 'money' }
   | { view: 'planning' }
+  | { view: 'drive'; id: string }
   | { view: 'all' }
   | { view: 'notes' }
   | { view: 'health' }
@@ -168,22 +171,24 @@ function VaultApp({
   const [importOpen, setImportOpen] = useState(false);
   const [cardModal, setCardModal] = useState<BoardCard | { lane: Lane } | null>(null);
   const [planningTab, setPlanningTab] = useState<'board' | 'canvas'>('board');
+  const [driveSetup, setDriveSetup] = useState(false);
   // Sidebar groups remember their open/closed state per install.
-  const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean }>(
+  const [openGroups, setOpenGroups] = useState<{ creators: boolean; vault: boolean; drive: boolean }>(
     () => {
       try {
         return {
           creators: true,
           vault: true,
+          drive: true,
           ...loadPreference('nav-groups', {}),
         };
       } catch {
-        return { creators: true, vault: true };
+        return { creators: true, vault: true, drive: true };
       }
     },
   );
 
-  const toggleGroup = (key: 'creators' | 'vault') =>
+  const toggleGroup = (key: 'creators' | 'vault' | 'drive') =>
     setOpenGroups((g) => {
       const next = { ...g, [key]: !g[key] };
       savePreference('nav-groups', next);
@@ -554,6 +559,17 @@ function VaultApp({
         }}
       />
     );
+  } else if (route.view === 'drive') {
+    const creator = creators.find((c) => c.id === route.id);
+    content = creator ? (
+      <DriveView creator={creator} onSetup={() => setDriveSetup(true)} />
+    ) : (
+      <div className="view">
+        <div className="empty-state card">
+          <p>That creator no longer exists.</p>
+        </div>
+      </div>
+    );
   } else if (route.view === 'planning') {
     const tabs = (
       <div className="planning-tabs">
@@ -875,6 +891,43 @@ function VaultApp({
             ))}
           </NavGroup>
 
+          <NavGroup
+            label="Drive"
+            count={creators.filter((c) => c.drive_folder_url).length}
+            active={!searching && route.view === 'drive'}
+            expanded={openGroups.drive}
+            onNavigate={() => {
+              const first = sortedCreators.find((c) => c.drive_folder_url);
+              setQuery('');
+              if (first) setRoute({ view: 'drive', id: first.id });
+              if (!openGroups.drive) toggleGroup('drive');
+            }}
+            onToggle={() => toggleGroup('drive')}
+          >
+            {sortedCreators.filter((c) => c.drive_folder_url).length === 0 && (
+              <p className="nav-empty">No Drive folders linked yet.</p>
+            )}
+            {sortedCreators
+              .filter((c) => c.drive_folder_url)
+              .map((c) => (
+                <button
+                  key={c.id}
+                  className={`nav-item nav-child ${
+                    !searching && route.view === 'drive' && route.id === c.id
+                      ? 'nav-item-active'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setQuery('');
+                    setRoute({ view: 'drive', id: c.id });
+                  }}
+                >
+                  <CreatorAvatar creator={c} size={20} />
+                  <span className="nav-label">{c.name}</span>
+                </button>
+              ))}
+          </NavGroup>
+
           {navItem('Secure notes', { view: 'notes' }, on('notes'))}
           {navItem('Activity', { view: 'activity' }, on('activity'))}
         </nav>
@@ -1001,6 +1054,13 @@ function VaultApp({
             'id' in cardModal ? () => handleDeleteCard(cardModal) : undefined
           }
           onClose={() => setCardModal(null)}
+        />
+      )}
+
+      {driveSetup && (
+        <DrivePicker
+          onPick={() => setDriveSetup(false)}
+          onClose={() => setDriveSetup(false)}
         />
       )}
 

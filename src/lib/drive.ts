@@ -4,7 +4,9 @@ export interface DriveFile {
   mimeType: string;
   webViewLink?: string;
   iconLink?: string;
+  thumbnailLink?: string;
   modifiedTime?: string;
+  size?: string;
 }
 
 export const FOLDER_MIME = 'application/vnd.google-apps.folder';

@@ -44,4 +44,6 @@ contextBridge.exposeInMainWorld('vaultBridge', {
   driveSignOut: (): Promise<void> => ipcRenderer.invoke('drive:signOut'),
   driveList: (query: string): Promise<unknown[]> =>
     ipcRenderer.invoke('drive:list', query),
+  driveThumbnail: (fileId: string, link: string): Promise<string | null> =>
+    ipcRenderer.invoke('drive:thumbnail', fileId, link),
 });
