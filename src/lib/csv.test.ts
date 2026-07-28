@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildImport, guessColumns, parseAmount, parseCsv, parseMonth } from './csv';
+import {
+  buildImport,
+  guessColumns,
+  parseAmount,
+  parseCsv,
+  parseDay,
+  parseMonth,
+} from './csv';
 
 describe('parseCsv', () => {
   it('reads headers and rows', () => {
@@ -83,6 +90,37 @@ describe('parseMonth', () => {
   it('returns null for nonsense', () => {
     expect(parseMonth('')).toBeNull();
     expect(parseMonth('not a date')).toBeNull();
+  });
+});
+
+describe('parseDay', () => {
+  it('reads a full ISO date', () => {
+    expect(parseDay('2026-07-26')).toBe('2026-07-26');
+  });
+
+  it('reads slash dates, using a value over 12 to settle the order', () => {
+    expect(parseDay('26/07/2026')).toBe('2026-07-26');
+    expect(parseDay('07/26/2026')).toBe('2026-07-26');
+  });
+
+  it('returns null for a month-only value rather than inventing the 1st', () => {
+    // Guessing a day would pile a whole month onto one date and draw a spike
+    // that never happened.
+    expect(parseDay('2026-07')).toBeNull();
+  });
+
+  it('reads named-month dates that carry a day', () => {
+    expect(parseDay('26 July 2026')).toBe('2026-07-26');
+    expect(parseDay('July 26, 2026')).toBe('2026-07-26');
+  });
+
+  it('rejects a named month with no day', () => {
+    expect(parseDay('July 2026')).toBeNull();
+  });
+
+  it('returns null for rubbish', () => {
+    expect(parseDay('')).toBeNull();
+    expect(parseDay('total')).toBeNull();
   });
 });
 

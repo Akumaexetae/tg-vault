@@ -32,6 +32,7 @@ import {
   saveDocument,
   saveEarning,
   saveEarnings,
+  saveDaily,
   setEarningPaid,
   createCard,
   updateCard,
@@ -542,11 +543,16 @@ function VaultApp({
   const handleImportStatement = async (
     creatorId: string,
     rows: { month: string; gross: number }[],
+    days: { day: string; gross: number }[],
     currency: string,
   ) => {
     await saveEarnings(creatorId, rows, currency, user);
+    // Keep the per-day detail too — it's what makes day and week charts real
+    // rather than a month's total smeared across 30 equal days.
+    await saveDaily(creatorId, days, currency, user);
     await refresh();
-    toast(`Imported ${rows.length} month${rows.length === 1 ? '' : 's'}`);
+    const months = `${rows.length} month${rows.length === 1 ? '' : 's'}`;
+    toast(days.length ? `Imported ${months} with daily detail` : `Imported ${months}`);
   };
 
   const handleSaveEarnings = async (

@@ -58,6 +58,7 @@ export function useVault(): VaultState {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'secure_notes' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creator_documents' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creator_earnings' }, () => refresh())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'creator_daily' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'board_cards' }, () => refresh())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'activity' }, () => refresh())
       .subscribe();

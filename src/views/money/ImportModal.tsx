@@ -3,6 +3,7 @@ import {
   buildImport,
   guessColumns,
   parseCsv,
+  type ImportDay,
   type ImportRow,
   type ParsedCsv,
 } from '../../lib/csv';
@@ -14,6 +15,7 @@ interface Props {
   onImport: (
     creatorId: string,
     rows: ImportRow[],
+    days: ImportDay[],
     currency: string,
   ) => Promise<void>;
   onClose: () => void;
@@ -77,7 +79,12 @@ export function ImportModal({
     setSaving(true);
     setError('');
     try {
-      await onImport(creatorId, preview.rows, currency.trim().toUpperCase() || 'EUR');
+      await onImport(
+        creatorId,
+        preview.rows,
+        preview.days,
+        currency.trim().toUpperCase() || 'EUR',
+      );
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import failed.');

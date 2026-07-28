@@ -2326,6 +2326,133 @@ table.canvas-table {
   color: var(--ink-soft);
 }
 
+/* --- Revenue analytics --------------------------------------------------- */
+.analytics {
+  margin-bottom: 26px;
+}
+.analytics-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.analytics-right {
+  margin-left: auto;
+}
+.analytics-dates {
+  align-items: center;
+  gap: 6px;
+  width: auto;
+}
+.analytics-stats {
+  margin-bottom: 12px;
+}
+
+.chart-card {
+  position: relative;
+  padding: 14px 16px 8px;
+  overflow: visible;
+}
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.chart-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  /* Text wears ink, never the series colour — the swatch carries identity. */
+  color: var(--ink-soft);
+}
+.chart-key i,
+.chart-tooltip i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.chart-axis {
+  font-size: 10.5px;
+  fill: var(--ink-soft);
+  font-family: inherit;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(0, 60, 100, 0.16);
+  padding: 8px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  pointer-events: none;
+  min-width: 150px;
+}
+.chart-tooltip span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+}
+.chart-tooltip b {
+  margin-left: auto;
+  color: var(--ink);
+}
+.chart-approx {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--warning);
+  margin-top: 2px;
+}
+.chart-note {
+  font-size: 12px;
+  margin: 8px 2px 0;
+}
+
+.analytics-table-wrap {
+  margin-top: 12px;
+  padding: 4px 12px 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.analytics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.analytics-table th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+.analytics-table td {
+  padding: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+.analytics-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.money-month-heading {
+  margin: 4px 0 10px;
+}
+
 /* --- Toasts -------------------------------------------------------------- */
 .toast-stack {
   position: fixed;

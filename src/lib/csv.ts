@@ -130,34 +130,101 @@ export function parseMonth(raw: string): string | null {
   return null;
 }
 
+/**
+ * The exact day, when the value carries one.
+ *
+ * Returns null for month-only values like "2026-07" — inventing a day there
+ * would put a whole month's revenue on the 1st and draw a spike that never
+ * happened. Same ambiguity rule as parseMonth: day-first unless proven.
+ */
+export function parseDay(raw: string): string | null {
+  const s = raw.trim();
+  if (!s) return null;
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const slash = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/.exec(s);
+  if (slash) {
+    const a = Number(slash[1]);
+    const b = Number(slash[2]);
+    let year = Number(slash[3]);
+    if (year < 100) year += 2000;
+    const day = b > 12 ? b : a;
+    const month = b > 12 ? a : b;
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+
+  // Named months, but ONLY when a day number is genuinely present. Handing a
+  // month-only string to Date() yields the 1st, which would pile the whole
+  // month onto one day. The negative lookahead stops "July 2026" matching its
+  // year as a day.
+  const hasDayToken =
+    /^(?:[A-Za-z]{3,}\.?\s+\d{1,2}(?!\d)|\d{1,2}(?!\d)\s+[A-Za-z]{3,})/.test(s);
+  if (hasDayToken) {
+    const named = new Date(s);
+    if (!Number.isNaN(named.getTime())) {
+      // Read back the LOCAL components. Date() parsed this as local midnight,
+      // so toISOString() would shift it a day earlier anywhere east of UTC.
+      const y = named.getFullYear();
+      const m = String(named.getMonth() + 1).padStart(2, '0');
+      const d = String(named.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+  return null;
+}
+
 export interface ImportRow {
   month: string;
   gross: number;
 }
 
-/** Sums every row into one total per month — statements list transactions. */
+export interface ImportDay {
+  day: string;
+  gross: number;
+}
+
+/**
+ * Sums transactions into monthly totals AND keeps the per-day detail.
+ *
+ * The daily rows are what make day and week charts possible; discarding them
+ * (as an earlier version did) throws away resolution the file already has.
+ */
 export function buildImport(
   parsed: ParsedCsv,
   monthColumn: number,
   amountColumn: number,
-): { rows: ImportRow[]; skipped: number } {
-  const totals = new Map<string, number>();
+): { rows: ImportRow[]; days: ImportDay[]; skipped: number } {
+  const months = new Map<string, number>();
+  const days = new Map<string, number>();
   let skipped = 0;
 
+  const bump = (map: Map<string, number>, key: string, amount: number) => {
+    map.set(key, Math.round(((map.get(key) ?? 0) + amount) * 100) / 100);
+  };
+
   for (const row of parsed.rows) {
-    const month = parseMonth(row[monthColumn] ?? '');
+    const raw = row[monthColumn] ?? '';
+    const month = parseMonth(raw);
     const amount = parseAmount(row[amountColumn] ?? '');
     if (!month || amount === null) {
       skipped++;
       continue;
     }
-    totals.set(month, Math.round((totals.get(month) ?? 0) * 100 + amount * 100) / 100);
+    bump(months, month, amount);
+    const exactDay = parseDay(raw);
+    if (exactDay) bump(days, exactDay, amount);
   }
 
   return {
-    rows: [...totals.entries()]
+    rows: [...months.entries()]
       .map(([month, gross]) => ({ month, gross }))
       .sort((a, b) => a.month.localeCompare(b.month)),
+    days: [...days.entries()]
+      .map(([day, gross]) => ({ day, gross }))
+      .sort((a, b) => a.day.localeCompare(b.day)),
     skipped,
   };
 }

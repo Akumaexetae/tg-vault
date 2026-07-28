@@ -5,6 +5,7 @@ import type {
   Creator,
   CreatorDocument,
   CreatorEarning,
+  CreatorDaily,
   CreatorInput,
   BoardCard,
   Canvas,
@@ -42,12 +43,13 @@ function asError(error: {
 }
 
 export async function fetchAll(): Promise<VaultData> {
-  const [creators, entries, notes, documents, earnings, cards, activity] = await Promise.all([
+  const [creators, entries, notes, documents, earnings, daily, cards, activity] = await Promise.all([
     getClient().from('creators').select('*').order('name'),
     getClient().from('entries').select('*').order('service_name'),
     getClient().from('secure_notes').select('*').order('title'),
     getClient().from('creator_documents').select('*').order('created_at'),
     getClient().from('creator_earnings').select('*').order('month'),
+    getClient().from('creator_daily').select('*').order('day'),
     getClient().from('board_cards').select('*').order('position'),
     getClient()
       .from('activity')
@@ -60,6 +62,7 @@ export async function fetchAll(): Promise<VaultData> {
   if (notes.error) throw asError(notes.error);
   if (documents.error) throw asError(documents.error);
   if (earnings.error) throw asError(earnings.error);
+  if (daily.error) throw asError(daily.error);
   if (cards.error) throw asError(cards.error);
   if (activity.error) throw asError(activity.error);
   return {
@@ -68,6 +71,7 @@ export async function fetchAll(): Promise<VaultData> {
     notes: notes.data as SecureNote[],
     documents: documents.data as CreatorDocument[],
     earnings: earnings.data as CreatorEarning[],
+    daily: daily.data as CreatorDaily[],
     cards: cards.data as BoardCard[],
     activity: activity.data as Activity[],
   };
@@ -512,6 +516,29 @@ export async function saveEarnings(
     'updated',
     `${months.length} month${months.length === 1 ? '' : 's'} of earnings imported`,
   );
+}
+
+/** Per-day detail from a statement import — the monthly row stays canonical. */
+export async function saveDaily(
+  creatorId: string,
+  days: { day: string; gross: number }[],
+  currency: string,
+  who: User,
+): Promise<void> {
+  if (days.length === 0) return;
+  const { error } = await getClient()
+    .from('creator_daily')
+    .upsert(
+      days.map((d) => ({
+        creator_id: creatorId,
+        day: d.day,
+        gross: d.gross,
+        currency,
+        updated_by: who,
+      })),
+      { onConflict: 'creator_id,day' },
+    );
+  if (error) throw asError(error);
 }
 
 export async function saveEarning(

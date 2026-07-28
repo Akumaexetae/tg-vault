@@ -198,6 +198,16 @@ export interface BoardCard {
   updated_by: User;
 }
 
+export interface CreatorDaily {
+  id: string;
+  creator_id: string;
+  day: string; // ISO date
+  gross: number;
+  currency: string;
+  created_at: string;
+  updated_by: User;
+}
+
 export interface Activity {
   id: string;
   who: User;
@@ -212,6 +222,7 @@ export interface VaultData {
   notes: SecureNote[];
   documents: CreatorDocument[];
   earnings: CreatorEarning[];
+  daily: CreatorDaily[];
   cards: BoardCard[];
   activity: Activity[];
 }

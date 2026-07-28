@@ -38,6 +38,7 @@ const data: VaultData = {
   notes: [],
   documents: [],
   earnings: [],
+  daily: [],
   cards: [],
   activity: [],
 };

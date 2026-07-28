@@ -8,6 +8,7 @@ import {
   buildAccountingCsv,
 } from '../../lib/accounting';
 import type { Creator, CreatorEarning, VaultData } from '../../lib/types';
+import { AnalyticsPanel } from './AnalyticsPanel';
 
 interface Props {
   data: VaultData;
@@ -94,6 +95,10 @@ export function MoneyView({
           </button>
         </div>
       </div>
+
+      <AnalyticsPanel data={data} currency={totals[0]?.currency ?? 'EUR'} />
+
+      <h2 className="money-month-heading">{label}</h2>
 
       {totals.map((t) => (
         <div key={t.currency} className="stat-row money-totals">
