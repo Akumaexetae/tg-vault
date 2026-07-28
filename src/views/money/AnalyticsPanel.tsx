@@ -186,6 +186,7 @@ export function AnalyticsPanel({ data, currency }: Props) {
         creators={data.creators}
         currency={currency}
         mode={mode}
+        granularity={effective}
       />
 
       {!hasDaily && (effective === 'day' || effective === 'week') && (

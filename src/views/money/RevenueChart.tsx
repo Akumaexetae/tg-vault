@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Point } from '../../lib/analytics';
+import type { Granularity, Point } from '../../lib/analytics';
 import type { Creator } from '../../lib/types';
 
 /**
@@ -25,7 +25,14 @@ interface Props {
   creators: Creator[];
   currency: string;
   mode: 'total' | 'creator';
+  granularity: Granularity;
 }
+
+/**
+ * Day view gets a fixed width per point and scrolls sideways, so every date
+ * is labelled rather than thinned out. Wide enough for a two-digit day.
+ */
+const DAY_SLOT = 34;
 
 const money = (n: number, currency: string) =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${currency}`;
@@ -37,7 +44,13 @@ function niceMax(value: number): number {
   return Math.ceil(value / magnitude) * magnitude;
 }
 
-export function RevenueChart({ points, creators, currency, mode }: Props) {
+export function RevenueChart({
+  points,
+  creators,
+  currency,
+  mode,
+  granularity,
+}: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(720);
   const [hover, setHover] = useState<number | null>(null);
@@ -67,7 +80,14 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
   const named = ranked.slice(0, SERIES.length);
   const nameOf = (id: string) => creators.find((c) => c.id === id)?.name ?? 'Unknown';
 
-  const plotW = Math.max(10, width - PAD.left - PAD.right);
+  // Daily data is dense enough to read as a trend, so it gets an area and its
+  // own scrollable width; coarser buckets stay discrete bars.
+  const daily = granularity === 'day';
+  const naturalW = Math.max(10, width - PAD.left - PAD.right);
+  const plotW = daily
+    ? Math.max(naturalW, points.length * DAY_SLOT)
+    : naturalW;
+  const svgW = plotW + PAD.left + PAD.right;
   const plotH = HEIGHT - PAD.top - PAD.bottom;
 
   const max = niceMax(Math.max(...points.map((p) => p.gross), 0));
@@ -79,8 +99,21 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
   const barX = (i: number) => PAD.left + i * bandW + (bandW - barW) / 2;
   const barMid = (i: number) => barX(i) + barW / 2;
 
+  // A point per day for the area path.
+  const pointX = (i: number) =>
+    PAD.left + (points.length === 1 ? plotW / 2 : (i * plotW) / (points.length - 1));
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${pointX(i)} ${y(p.agency)}`)
+    .join(' ');
+  const areaPath = points.length
+    ? `${linePath} L ${pointX(points.length - 1)} ${y(0)} L ${pointX(0)} ${y(0)} Z`
+    : '';
+
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => max * f);
-  const labelEvery = Math.max(1, Math.ceil(points.length / Math.floor(plotW / 64)));
+  // Every day is labelled in day view; coarser views thin labels to fit.
+  const labelEvery = daily
+    ? 1
+    : Math.max(1, Math.ceil(points.length / Math.floor(plotW / 64)));
 
   if (points.length === 0) {
     return (
@@ -120,15 +153,19 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
         )}
       </div>
 
+      <div className={daily ? 'chart-scroll' : undefined}>
       <svg
-        width={width}
+        width={svgW}
         height={HEIGHT}
         role="img"
         aria-label="Revenue by period"
         onMouseLeave={() => setHover(null)}
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          const i = Math.floor((e.clientX - rect.left - PAD.left) / bandW);
+          const px = e.clientX - rect.left - PAD.left;
+          const i = daily
+            ? Math.round((px / plotW) * (points.length - 1))
+            : Math.floor(px / bandW);
           setHover(i >= 0 && i < points.length ? i : null);
         }}
       >
@@ -137,7 +174,7 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
           <g key={t}>
             <line
               x1={PAD.left}
-              x2={width - PAD.right}
+              x2={svgW - PAD.right}
               y1={y(t)}
               y2={y(t)}
               stroke="rgba(0,100,150,0.12)"
@@ -160,74 +197,106 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
           />
         )}
 
-        {/*
-         * Bars in every mode. Revenue per period is a discrete quantity, not a
-         * continuous signal — a line would imply a smooth path between months
-         * that never existed, and switching form with the bucket count made the
-         * chart look different every time the range changed.
-         */}
+        {daily ? (
+          /*
+           * Dense daily data reads as a trend, so it gets an area under the
+           * agency cut. Coarse buckets stay bars — see below.
+           */
+          <>
+            <path d={areaPath} fill={ACCENT} opacity="0.16" />
+            <path
+              d={linePath}
+              fill="none"
+              stroke={ACCENT}
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+            {points.map((p, i) =>
+              p.gross > 0 ? (
+                <circle key={p.key} cx={pointX(i)} cy={y(p.agency)} r="3" fill={ACCENT} />
+              ) : null,
+            )}
+          </>
+        ) : (
+          /*
+           * Bars for coarse buckets. Revenue per month is a discrete quantity,
+           * not a continuous signal — a line between months implies a path
+           * through values that never existed.
+           */
+          points.map((p, i) => {
+            const segments =
+              mode === 'total'
+                ? [
+                    { id: 'cut', value: p.agency, fill: ACCENT },
+                    { id: 'rest', value: p.creators, fill: CONTEXT },
+                  ]
+                : [
+                    ...named.map((id, sIdx) => ({
+                      id,
+                      value: p.byCreator[id] ?? 0,
+                      fill: SERIES[sIdx] as string,
+                    })),
+                    {
+                      id: 'other',
+                      value: ranked
+                        .slice(SERIES.length)
+                        .reduce((n, id) => n + (p.byCreator[id] ?? 0), 0),
+                      fill: OTHER,
+                    },
+                  ];
+
+            let acc = 0;
+            return (
+              <g key={p.key}>
+                {segments
+                  .filter((seg) => seg.value > 0)
+                  .map((seg) => {
+                    const h = (seg.value / max) * plotH;
+                    const top = y(acc + seg.value);
+                    acc += seg.value;
+                    return (
+                      <rect
+                        key={seg.id}
+                        x={barX(i)}
+                        y={top}
+                        width={barW}
+                        /* 2px surface gap between stacked segments. */
+                        height={Math.max(1, h - 2)}
+                        rx="3"
+                        fill={seg.fill}
+                      />
+                    );
+                  })}
+              </g>
+            );
+          })
+        )}
+
         {points.map((p, i) => {
-          const segments =
-            mode === 'total'
-              ? [
-                  { id: 'cut', value: p.agency, fill: ACCENT },
-                  { id: 'rest', value: p.creators, fill: CONTEXT },
-                ]
-              : [
-                  ...named.map((id, s) => ({
-                    id,
-                    value: p.byCreator[id] ?? 0,
-                    fill: SERIES[s] as string,
-                  })),
-                  {
-                    id: 'other',
-                    value: ranked
-                      .slice(SERIES.length)
-                      .reduce((n, id) => n + (p.byCreator[id] ?? 0), 0),
-                    fill: OTHER,
-                  },
-                ];
-
-          let acc = 0;
+          if (i % labelEvery !== 0) return null;
+          const dayNo = Number(p.key.slice(8, 10));
+          // In day view the label is just the number, with the month named on
+          // the 1st and at the start — otherwise 30 dates collide.
+          const text = daily
+            ? dayNo === 1 || i === 0
+              ? p.label
+              : String(dayNo)
+            : p.label;
           return (
-            <g key={p.key}>
-              {segments
-                .filter((seg) => seg.value > 0)
-                .map((seg) => {
-                  const h = (seg.value / max) * plotH;
-                  const top = y(acc + seg.value);
-                  acc += seg.value;
-                  return (
-                    <rect
-                      key={seg.id}
-                      x={barX(i)}
-                      y={top}
-                      width={barW}
-                      /* 2px surface gap between stacked segments. */
-                      height={Math.max(1, h - 2)}
-                      rx="3"
-                      fill={seg.fill}
-                    />
-                  );
-                })}
-            </g>
-          );
-        })}
-
-        {points.map((p, i) =>
-          i % labelEvery === 0 ? (
             <text
               key={p.key}
-              x={barMid(i)}
+              x={daily ? pointX(i) : barMid(i)}
               y={HEIGHT - 10}
-              className="chart-axis"
+              className={`chart-axis ${daily && dayNo === 1 ? 'chart-axis-strong' : ''}`}
               textAnchor="middle"
             >
-              {p.label}
+              {text}
             </text>
-          ) : null,
-        )}
+          );
+        })}
       </svg>
+      </div>
 
       {active && (
         <div className="chart-tooltip">

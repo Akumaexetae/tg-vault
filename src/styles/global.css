@@ -2376,6 +2376,27 @@ table.canvas-table {
   margin: 0;
 }
 
+.chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Room for the scrollbar so it never sits over the date labels. */
+  padding-bottom: 4px;
+}
+.chart-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.chart-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 100, 150, 0.25);
+  border-radius: 99px;
+}
+.chart-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chart-axis-strong {
+  font-weight: 700;
+  fill: var(--ink);
+}
+
 .chart-legend {
   display: flex;
   gap: 16px;
