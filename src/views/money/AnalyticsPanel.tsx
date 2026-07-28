@@ -10,13 +10,14 @@ import {
   type Granularity,
   type RangePreset,
 } from '../../lib/analytics';
-import { monthsAgo } from '../../lib/money';
 import type { VaultData } from '../../lib/types';
 import { RevenueChart } from './RevenueChart';
 
 interface Props {
   data: VaultData;
   currency: string;
+  /** The page's selected month — day view follows it. */
+  month: string;
 }
 
 /**
@@ -33,14 +34,12 @@ const PRESETS: { key: RangePreset; label: string }[] = [
 const money = (n: number, currency: string) =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${currency}`;
 
-export function AnalyticsPanel({ data, currency }: Props) {
+export function AnalyticsPanel({ data, currency, month }: Props) {
   const [preset, setPreset] = useState<RangePreset>('last365');
   const [custom, setCustom] = useState<DateRange>(() => presetRange('last30'));
   const [granularity, setGranularity] = useState<Granularity | 'auto'>('auto');
   const [mode, setMode] = useState<'total' | 'creator'>('total');
   const [showTable, setShowTable] = useState(false);
-  // Day view browses one month at a time rather than the whole history.
-  const [dayMonth, setDayMonth] = useState(() => monthsAgo(0));
 
   // "All time" means the span the data covers, not since 1970 — otherwise
   // every empty bucket back to the Nixon administration gets drawn.
@@ -62,7 +61,7 @@ export function AnalyticsPanel({ data, currency }: Props) {
   };
 
   const range = byDay
-    ? { from: dayMonth, to: monthEnd(dayMonth) }
+    ? { from: month, to: monthEnd(month) }
     : preset === 'custom'
       ? custom
       : preset === 'all'
@@ -71,12 +70,7 @@ export function AnalyticsPanel({ data, currency }: Props) {
 
   const effective = granularity === 'auto' ? sensibleGranularity(range) : granularity;
 
-  const shiftMonth = (by: number) => {
-    const d = new Date(`${dayMonth}T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() + by);
-    setDayMonth(d.toISOString().slice(0, 10));
-  };
-  const monthLabel = new Date(`${dayMonth}T00:00:00Z`).toLocaleDateString(undefined, {
+  const monthLabel = new Date(`${month}T00:00:00Z`).toLocaleDateString(undefined, {
     month: 'long',
     year: 'numeric',
   });
@@ -105,19 +99,10 @@ export function AnalyticsPanel({ data, currency }: Props) {
     <section className="analytics">
       <div className="analytics-controls">
         {byDay ? (
-          <div className="month-nav">
-            <button className="btn btn-tiny" onClick={() => shiftMonth(-1)}>
-              ‹
-            </button>
-            <span className="month-nav-label">{monthLabel}</span>
-            <button
-              className="btn btn-tiny"
-              disabled={dayMonth >= monthsAgo(0)}
-              onClick={() => shiftMonth(1)}
-            >
-              ›
-            </button>
-          </div>
+          <span className="analytics-following">
+            Showing <strong>{monthLabel}</strong> — use the arrows above to
+            change month
+          </span>
         ) : (
           <div className="chip-row">
             {PRESETS.map((p) => (

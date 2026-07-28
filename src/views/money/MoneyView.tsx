@@ -32,8 +32,14 @@ export function MoneyView({
   onTogglePaid,
   onOpenCreator,
 }: Props) {
-  const [offset, setOffset] = useState(0);
-  const month = monthsAgo(offset);
+  // One month for the whole page: the header arrows drive the payout rows
+  // below and, in day view, the chart above.
+  const [month, setMonth] = useState(() => monthsAgo(0));
+  const shiftMonth = (by: number) => {
+    const d = new Date(`${month}T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() + by);
+    setMonth(d.toISOString().slice(0, 10));
+  };
 
   const rows = data.earnings
     .filter((e) => e.month.slice(0, 7) === month.slice(0, 7))
@@ -61,14 +67,14 @@ export function MoneyView({
         </div>
         <div className="filter-row">
           <div className="month-nav">
-            <button className="btn btn-tiny" onClick={() => setOffset((o) => o + 1)}>
+            <button className="btn btn-tiny" onClick={() => shiftMonth(-1)}>
               ‹
             </button>
             <span className="month-nav-label">{label}</span>
             <button
               className="btn btn-tiny"
-              disabled={offset === 0}
-              onClick={() => setOffset((o) => Math.max(0, o - 1))}
+              disabled={month >= monthsAgo(0)}
+              onClick={() => shiftMonth(1)}
             >
               ›
             </button>
@@ -96,7 +102,11 @@ export function MoneyView({
         </div>
       </div>
 
-      <AnalyticsPanel data={data} currency={totals[0]?.currency ?? 'EUR'} />
+      <AnalyticsPanel
+        data={data}
+        currency={totals[0]?.currency ?? 'EUR'}
+        month={month}
+      />
 
       <h2 className="money-month-heading">{label}</h2>
 
