@@ -10,6 +10,7 @@ import {
   type Granularity,
   type RangePreset,
 } from '../../lib/analytics';
+import { monthsAgo } from '../../lib/money';
 import type { VaultData } from '../../lib/types';
 import { RevenueChart } from './RevenueChart';
 
@@ -38,6 +39,8 @@ export function AnalyticsPanel({ data, currency }: Props) {
   const [granularity, setGranularity] = useState<Granularity | 'auto'>('auto');
   const [mode, setMode] = useState<'total' | 'creator'>('total');
   const [showTable, setShowTable] = useState(false);
+  // Day view browses one month at a time rather than the whole history.
+  const [dayMonth, setDayMonth] = useState(() => monthsAgo(0));
 
   // "All time" means the span the data covers, not since 1970 — otherwise
   // every empty bucket back to the Nixon administration gets drawn.
@@ -45,14 +48,38 @@ export function AnalyticsPanel({ data, currency }: Props) {
     () => dataRange(data.daily, data.earnings),
     [data.daily, data.earnings],
   );
-  const range =
-    preset === 'custom'
+  /*
+   * Choosing "By day" switches the range control to a month browser — a whole
+   * history of days is unreadable, and the useful question is "how did this
+   * month go", not "show me 400 bars".
+   */
+  const byDay = granularity === 'day';
+  const monthEnd = (first: string) => {
+    const d = new Date(`${first}T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() + 1);
+    d.setUTCDate(0);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const range = byDay
+    ? { from: dayMonth, to: monthEnd(dayMonth) }
+    : preset === 'custom'
       ? custom
       : preset === 'all'
-        ? (covered ?? presetRange('last30'))
+        ? (covered ?? presetRange('last365'))
         : presetRange(preset);
-  const effective =
-    granularity === 'auto' ? sensibleGranularity(range) : granularity;
+
+  const effective = granularity === 'auto' ? sensibleGranularity(range) : granularity;
+
+  const shiftMonth = (by: number) => {
+    const d = new Date(`${dayMonth}T00:00:00Z`);
+    d.setUTCMonth(d.getUTCMonth() + by);
+    setDayMonth(d.toISOString().slice(0, 10));
+  };
+  const monthLabel = new Date(`${dayMonth}T00:00:00Z`).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric',
+  });
 
   const points = useMemo(
     () => aggregate(data.daily, data.earnings, data.creators, range, effective),
@@ -77,25 +104,41 @@ export function AnalyticsPanel({ data, currency }: Props) {
   return (
     <section className="analytics">
       <div className="analytics-controls">
-        <div className="chip-row">
-          {PRESETS.map((p) => (
-            <button
-              key={p.key}
-              className={`chip ${preset === p.key ? 'chip-active' : ''}`}
-              onClick={() => setPreset(p.key)}
-            >
-              {p.label}
+        {byDay ? (
+          <div className="month-nav">
+            <button className="btn btn-tiny" onClick={() => shiftMonth(-1)}>
+              ‹
             </button>
-          ))}
-          <button
-            className={`chip ${preset === 'custom' ? 'chip-active' : ''}`}
-            onClick={() => setPreset('custom')}
-          >
-            Custom
-          </button>
-        </div>
+            <span className="month-nav-label">{monthLabel}</span>
+            <button
+              className="btn btn-tiny"
+              disabled={dayMonth >= monthsAgo(0)}
+              onClick={() => shiftMonth(1)}
+            >
+              ›
+            </button>
+          </div>
+        ) : (
+          <div className="chip-row">
+            {PRESETS.map((p) => (
+              <button
+                key={p.key}
+                className={`chip ${preset === p.key ? 'chip-active' : ''}`}
+                onClick={() => setPreset(p.key)}
+              >
+                {p.label}
+              </button>
+            ))}
+            <button
+              className={`chip ${preset === 'custom' ? 'chip-active' : ''}`}
+              onClick={() => setPreset('custom')}
+            >
+              Custom
+            </button>
+          </div>
+        )}
 
-        {preset === 'custom' && (
+        {!byDay && preset === 'custom' && (
           <div className="analytics-dates">
             <input
               className="input input-small"

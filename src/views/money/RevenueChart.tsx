@@ -28,12 +28,6 @@ interface Props {
   granularity: Granularity;
 }
 
-/**
- * Day view gets a fixed width per point and scrolls sideways, so every date
- * is labelled rather than thinned out. Wide enough for a two-digit day.
- */
-const DAY_SLOT = 34;
-
 const money = (n: number, currency: string) =>
   `${n.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${currency}`;
 
@@ -83,11 +77,8 @@ export function RevenueChart({
   // Daily data is dense enough to read as a trend, so it gets an area and its
   // own scrollable width; coarser buckets stay discrete bars.
   const daily = granularity === 'day';
-  const naturalW = Math.max(10, width - PAD.left - PAD.right);
-  const plotW = daily
-    ? Math.max(naturalW, points.length * DAY_SLOT)
-    : naturalW;
-  const svgW = plotW + PAD.left + PAD.right;
+  const plotW = Math.max(10, width - PAD.left - PAD.right);
+  const svgW = width;
   const plotH = HEIGHT - PAD.top - PAD.bottom;
 
   const max = niceMax(Math.max(...points.map((p) => p.gross), 0));
@@ -153,7 +144,6 @@ export function RevenueChart({
         )}
       </div>
 
-      <div className={daily ? 'chart-scroll' : undefined}>
       <svg
         width={svgW}
         height={HEIGHT}
@@ -296,7 +286,6 @@ export function RevenueChart({
           );
         })}
       </svg>
-      </div>
 
       {active && (
         <div className="chart-tooltip">
