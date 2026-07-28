@@ -2429,6 +2429,12 @@ table.canvas-table {
   margin-left: auto;
   color: var(--ink);
 }
+.chart-total {
+  border-top: 1px dashed var(--border);
+  padding-top: 4px;
+  margin-top: 2px;
+  font-weight: 600;
+}
 .chart-approx {
   font-style: normal;
   font-size: 10.5px;
