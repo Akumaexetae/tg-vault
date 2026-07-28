@@ -100,6 +100,8 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
   }
 
   const active = hover !== null ? points[hover] : null;
+  // Fewer than three buckets is not a trend; draw it as bars.
+  const sparse = points.length < 3;
 
   return (
     <div className="card chart-card" ref={wrap}>
@@ -139,7 +141,7 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
           const rect = e.currentTarget.getBoundingClientRect();
           const px = e.clientX - rect.left - PAD.left;
           const i =
-            mode === 'total'
+            mode === 'total' && !sparse
               ? Math.round(px / (step || plotW))
               : Math.floor(px / bandW);
           setHover(i >= 0 && i < points.length ? i : null);
@@ -163,27 +165,55 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
         ))}
 
         {mode === 'total' ? (
-          <>
-            <path d={areaPath(points.map((p) => p.gross))} fill={CONTEXT} opacity="0.5" />
-            <path
-              d={path(points.map((p) => p.gross))}
-              fill="none"
-              stroke={CONTEXT}
-              strokeWidth="2"
-            />
-            <path
-              d={path(points.map((p) => p.agency))}
-              fill="none"
-              stroke={ACCENT}
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
-            {points.length <= 40 &&
-              points.map((p, i) => (
-                <circle key={p.key} cx={x(i)} cy={y(p.agency)} r="3" fill={ACCENT} />
-              ))}
-          </>
+          sparse ? (
+            /*
+             * One or two buckets can't describe a trend — a line through a
+             * single point is just a dot. Bars state the values plainly, and
+             * the cut sits in front of the gross because it is part of it.
+             */
+            points.map((p, i) => (
+              <g key={p.key}>
+                <rect
+                  x={barX(i)}
+                  y={y(p.gross)}
+                  width={barW}
+                  height={Math.max(1, plotH - (y(p.gross) - PAD.top))}
+                  rx="4"
+                  fill={CONTEXT}
+                />
+                <rect
+                  x={barX(i) + barW * 0.18}
+                  y={y(p.agency)}
+                  width={barW * 0.64}
+                  height={Math.max(1, plotH - (y(p.agency) - PAD.top))}
+                  rx="4"
+                  fill={ACCENT}
+                />
+              </g>
+            ))
+          ) : (
+            <>
+              <path d={areaPath(points.map((p) => p.gross))} fill={CONTEXT} opacity="0.5" />
+              <path
+                d={path(points.map((p) => p.gross))}
+                fill="none"
+                stroke={CONTEXT}
+                strokeWidth="2"
+              />
+              <path
+                d={path(points.map((p) => p.agency))}
+                fill="none"
+                stroke={ACCENT}
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {points.length <= 40 &&
+                points.map((p, i) => (
+                  <circle key={p.key} cx={x(i)} cy={y(p.agency)} r="3" fill={ACCENT} />
+                ))}
+            </>
+          )
         ) : (
           points.map((p, i) => {
             let acc = 0;
@@ -225,8 +255,8 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
         {/* Crosshair */}
         {active && (
           <line
-            x1={mode === 'total' ? x(hover as number) : barX(hover as number) + barW / 2}
-            x2={mode === 'total' ? x(hover as number) : barX(hover as number) + barW / 2}
+            x1={mode === 'total' && !sparse ? x(hover as number) : barX(hover as number) + barW / 2}
+            x2={mode === 'total' && !sparse ? x(hover as number) : barX(hover as number) + barW / 2}
             y1={PAD.top}
             y2={PAD.top + plotH}
             stroke="rgba(0,100,150,0.35)"
@@ -239,7 +269,7 @@ export function RevenueChart({ points, creators, currency, mode }: Props) {
           i % labelEvery === 0 ? (
             <text
               key={p.key}
-              x={mode === 'total' ? x(i) : barX(i) + barW / 2}
+              x={mode === 'total' && !sparse ? x(i) : barX(i) + barW / 2}
               y={HEIGHT - 10}
               className="chart-axis"
               textAnchor="middle"
