@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SERVICES, serviceDef } from '../lib/catalog';
 import type { Creator, CustomField, Entry, EntryInput } from '../lib/types';
 import { CloseIcon } from './icons';
+import { ModalOverlay } from './ModalOverlay';
 import { ServiceIcon } from './ServiceIcon';
 
 interface Props {
@@ -109,7 +110,7 @@ export function EntryModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{initial ? 'Edit account' : 'Add account'}</h2>
 
@@ -283,6 +284,6 @@ export function EntryModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

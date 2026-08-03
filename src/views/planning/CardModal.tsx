@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import { LANES } from '../../lib/board';
 import type { BoardCard, Creator, Lane, User } from '../../lib/types';
 
@@ -61,7 +62,7 @@ export function CardModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{initial ? 'Edit card' : 'New card'}</h2>
 
@@ -153,6 +154,6 @@ export function CardModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CreatorAvatar } from '../../components/CreatorAvatar';
 import { CloseIcon } from '../../components/icons';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import {
   showsPersonalFields,
   validatePayout,
@@ -171,7 +172,7 @@ export function CreatorModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{initial ? `Edit ${initial.name}` : 'Add creator'}</h2>
 
@@ -487,6 +488,6 @@ export function CreatorModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

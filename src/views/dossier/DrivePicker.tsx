@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FolderIcon, DocumentIcon } from '../../components/icons';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import {
   FOLDER_MIME,
   childrenQuery,
@@ -101,7 +102,7 @@ export function DrivePicker({ assignTo, onPick, onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>
           {assignTo ? `Drive folder for ${assignTo.name}` : 'Google Drive'}
@@ -268,6 +269,6 @@ export function DrivePicker({ assignTo, onPick, onClose }: Props) {
           </>
         )}
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PencilIcon, TrashIcon } from '../components/icons';
+import { ModalOverlay } from '../components/ModalOverlay';
 import { timeAgo } from '../lib/time';
 import type { Creator, SecureNote } from '../lib/types';
 
@@ -117,7 +118,7 @@ function NoteModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>{initial ? 'Edit note' : 'New note'}</h2>
         <label className="form-label">Title</label>
@@ -147,6 +148,6 @@ function NoteModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

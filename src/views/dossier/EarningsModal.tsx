@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import { monthKey, splitEarning } from '../../lib/creators/earnings';
 import type { Creator, CreatorEarning } from '../../lib/types';
 
@@ -45,7 +46,7 @@ export function EarningsModal({ creator, earnings, onSave, onClose }: Props) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
         <h2>Record earnings — {creator.name}</h2>
         <p className="confirm-body">
@@ -117,6 +118,6 @@ export function EarningsModal({ creator, earnings, onSave, onClose }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

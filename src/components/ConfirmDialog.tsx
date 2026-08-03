@@ -1,3 +1,5 @@
+import { ModalOverlay } from './ModalOverlay';
+
 interface Props {
   title: string;
   body: string;
@@ -8,7 +10,7 @@ interface Props {
 
 export function ConfirmDialog({ title, body, confirmLabel, onConfirm, onCancel }: Props) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
+    <ModalOverlay onDismiss={onCancel}>
       <div className="modal modal-small" onClick={(e) => e.stopPropagation()}>
         <h2>{title}</h2>
         <p className="confirm-body">{body}</p>
@@ -21,6 +23,6 @@ export function ConfirmDialog({ title, body, confirmLabel, onConfirm, onCancel }
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

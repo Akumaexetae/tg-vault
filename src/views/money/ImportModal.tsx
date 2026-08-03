@@ -7,6 +7,7 @@ import {
   type ImportRow,
   type ParsedCsv,
 } from '../../lib/csv';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import type { Creator } from '../../lib/types';
 
 interface Props {
@@ -93,7 +94,7 @@ export function ImportModal({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <ModalOverlay onDismiss={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>Import a statement</h2>
         <p className="confirm-body">
@@ -230,6 +231,6 @@ export function ImportModal({
           </button>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

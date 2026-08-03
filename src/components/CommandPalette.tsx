@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { filterEntries } from '../lib/search';
 import { totpCode } from '../lib/totp';
 import type { Creator, Entry } from '../lib/types';
+import { ModalOverlay } from './ModalOverlay';
 import { ServiceIcon } from './ServiceIcon';
 
 interface Props {
@@ -56,7 +57,7 @@ export function CommandPalette({ entries, creators, onClose, onToast }: Props) {
   };
 
   return (
-    <div className="modal-overlay palette-overlay" onClick={onClose}>
+    <ModalOverlay className="palette-overlay" onDismiss={onClose}>
       <div className="palette" onClick={(e) => e.stopPropagation()}>
         <input
           className="palette-input"
@@ -103,6 +104,6 @@ export function CommandPalette({ entries, creators, onClose, onToast }: Props) {
           })}
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

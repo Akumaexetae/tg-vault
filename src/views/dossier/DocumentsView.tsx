@@ -5,6 +5,7 @@ import {
   DocumentIcon,
   IdIcon,
 } from '../../components/icons';
+import { ModalOverlay } from '../../components/ModalOverlay';
 import { validateDocument } from '../../lib/creators/validation';
 import { timeAgo } from '../../lib/time';
 import type { CreatorDocument } from '../../lib/types';
@@ -143,7 +144,7 @@ export function DocumentsView({
       )}
 
       {adding && (
-        <div className="modal-overlay" onClick={reset}>
+        <ModalOverlay onDismiss={reset}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Add document</h2>
 
@@ -204,7 +205,7 @@ export function DocumentsView({
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );
