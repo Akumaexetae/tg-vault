@@ -93,3 +93,7 @@ out/
 
 # Visual brainstorming companion
 .superpowers/
+
+# Vault exports — plaintext passwords. This repo is public.
+TGvault-Backups/
+tg-vault-*.json
