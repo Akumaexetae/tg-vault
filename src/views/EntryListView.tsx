@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { EntryRow } from '../components/EntryRow';
+import { sortByPassword } from '../lib/search';
 import type { Creator, Entry } from '../lib/types';
 
 interface Props {
@@ -34,6 +35,9 @@ export function EntryListView({
   onAdd,
   headerExtra,
 }: Props) {
+  const [byPassword, setByPassword] = useState(false);
+  const shown = byPassword ? sortByPassword(entries) : entries;
+
   return (
     <div className="view">
       <div className="view-header">
@@ -41,9 +45,21 @@ export function EntryListView({
           <h1>{title}</h1>
           {subtitle && <p className="muted">{subtitle}</p>}
         </div>
-        <button className="btn btn-primary" disabled={readOnly} onClick={onAdd}>
-          + Add account
-        </button>
+        <div className="view-header-actions">
+          {entries.length > 1 && (
+            <button
+              className={byPassword ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
+              aria-pressed={byPassword}
+              title="Sort accounts by password (numbers in order)"
+              onClick={() => setByPassword((on) => !on)}
+            >
+              {byPassword ? 'Sorted by password ✕' : 'Sort by password'}
+            </button>
+          )}
+          <button className="btn btn-primary" disabled={readOnly} onClick={onAdd}>
+            + Add account
+          </button>
+        </div>
       </div>
       {headerExtra}
       {entries.length === 0 ? (
@@ -52,7 +68,7 @@ export function EntryListView({
         </div>
       ) : (
         <div className="entry-list">
-          {entries.map((e) => (
+          {shown.map((e) => (
             <EntryRow
               key={e.id}
               entry={e}

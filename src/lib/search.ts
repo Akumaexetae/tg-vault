@@ -49,3 +49,10 @@ export function entryLabel(
   const owner = creator ? `${creator.name}'s` : '';
   return `${owner} ${entry.service_name}`.trim() + ` (${entry.username})`;
 }
+
+/** Sorts by password, numbers in order (pass2 before pass10). Returns a new array. */
+export function sortByPassword(entries: Entry[]): Entry[] {
+  return [...entries].sort((a, b) =>
+    a.password.localeCompare(b.password, undefined, { numeric: true, sensitivity: 'base' }),
+  );
+}

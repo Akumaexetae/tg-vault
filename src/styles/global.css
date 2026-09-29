@@ -501,6 +501,12 @@ h2 {
   gap: 12px;
 }
 
+.view-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .title-with-icon {
   display: inline-flex;
   align-items: center;
@@ -800,6 +806,11 @@ h2 {
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-dark);
+}
+.btn-toggle.is-on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-dark);
 }
 .btn-danger {
   background: var(--danger);

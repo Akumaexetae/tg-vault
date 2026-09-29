@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entryLabel, filterEntries, matchesCreator, matchesQuery } from './search';
+import { entryLabel, filterEntries, matchesCreator, matchesQuery, sortByPassword } from './search';
 import { makeCreator } from './creators/fixtures';
 import type { Creator, Entry } from './types';
 
@@ -85,5 +85,15 @@ describe('entryLabel', () => {
 
   it('handles a missing creator gracefully', () => {
     expect(entryLabel(entry({ creator_id: 'ghost' }), creators)).toBe('OnlyFans (bella@of.com)');
+  });
+});
+
+describe('sortByPassword', () => {
+  it('orders passwords with numbers in natural order, without mutating the input', () => {
+    const list = ['Insta10', 'insta2', 'Insta1'].map((password, i) =>
+      entry({ id: `e${i}`, password }),
+    );
+    expect(sortByPassword(list).map((e) => e.password)).toEqual(['Insta1', 'insta2', 'Insta10']);
+    expect(list.map((e) => e.password)).toEqual(['Insta10', 'insta2', 'Insta1']);
   });
 });
