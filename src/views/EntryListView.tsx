@@ -36,6 +36,7 @@ export function EntryListView({
   headerExtra,
 }: Props) {
   const [byPassword, setByPassword] = useState(false);
+  const [revealAll, setRevealAll] = useState(false);
   const shown = byPassword ? sortByPassword(entries) : entries;
 
   return (
@@ -46,6 +47,15 @@ export function EntryListView({
           {subtitle && <p className="muted">{subtitle}</p>}
         </div>
         <div className="view-header-actions">
+          {entries.length > 0 && (
+            <button
+              className={revealAll ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
+              aria-pressed={revealAll}
+              onClick={() => setRevealAll((on) => !on)}
+            >
+              {revealAll ? 'Hide passwords' : 'Show all passwords'}
+            </button>
+          )}
           {entries.length > 1 && (
             <button
               className={byPassword ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
@@ -76,6 +86,7 @@ export function EntryListView({
               readOnly={readOnly}
               showCreator={showCreator}
               reused={reusedIds.has(e.id)}
+              revealAll={revealAll}
               onEdit={onEdit}
               onDelete={onDelete}
               onTogglePin={onTogglePin}

@@ -13,6 +13,8 @@ interface Props {
   readOnly: boolean;
   showCreator?: boolean;
   reused?: boolean;
+  /** List-wide "show all passwords"; a row can still be toggled on its own after. */
+  revealAll?: boolean;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
   onTogglePin: (entry: Entry) => void;
@@ -80,11 +82,18 @@ export function EntryRow({
   readOnly,
   showCreator = true,
   reused = false,
+  revealAll = false,
   onEdit,
   onDelete,
   onTogglePin,
 }: Props) {
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(revealAll);
+  // Follow the list-wide toggle when it flips, without an effect.
+  const [lastRevealAll, setLastRevealAll] = useState(revealAll);
+  if (revealAll !== lastRevealAll) {
+    setLastRevealAll(revealAll);
+    setRevealed(revealAll);
+  }
   const [expanded, setExpanded] = useState(false);
   const toast = useToast();
   const creator = creators.find((c) => c.id === entry.creator_id);
