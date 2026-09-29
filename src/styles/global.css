@@ -589,6 +589,16 @@ h2 {
   gap: 12px;
 }
 
+/* Account rows are a grid, not a flex row: every row gets the same column widths, so
+   usernames, passwords and 2FA codes line up down the list whatever each row holds. */
+.entry-main-account {
+  display: grid;
+  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 210px;
+}
+.entry-main-account .entry-actions {
+  justify-content: flex-end;
+}
+
 .entry-id {
   display: flex;
   flex-direction: column;

@@ -126,7 +126,7 @@ export function EntryRow({
 
   return (
     <div className="entry-row card">
-      <div className="entry-main">
+      <div className="entry-main entry-main-account">
         <button
           className={`pin-btn ${entry.pinned ? 'pin-btn-on' : ''}`}
           title={entry.pinned ? 'Unpin' : 'Pin to dashboard'}
