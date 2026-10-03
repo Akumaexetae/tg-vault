@@ -23,13 +23,13 @@ export function buildCsv(data: VaultData): string {
     data.creators.find((c: Creator) => c.id === id)?.name ?? '';
   const header = [
     'Service', 'Creator', 'Username', 'Password', '2FA secret',
-    'URL', 'Proxy', 'Recovery', 'Notes', 'Updated',
+    'URL', 'Proxy', 'Account created', 'Recovery', 'Notes', 'Updated',
   ];
   const rows = data.entries.map((e) =>
     [
       e.service_name, creator(e.creator_id), e.username, e.password,
       e.totp_secret ?? '', e.service_url, e.proxy ?? '',
-      e.recovery ?? '', e.notes ?? '', e.updated_at,
+      e.account_created_at ?? '', e.recovery ?? '', e.notes ?? '', e.updated_at,
     ].map(csvCell).join(','),
   );
   return [header.join(','), ...rows].join('\r\n');

@@ -15,6 +15,7 @@ const entry = (over: Partial<Entry>): Entry => ({
   custom_fields: [],
   notes: null,
   proxy: null,
+  account_created_at: null,
   pinned: false,
   history: [],
   created_at: '2026-07-01T00:00:00Z',

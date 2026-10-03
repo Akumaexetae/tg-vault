@@ -118,6 +118,12 @@ export interface Entry {
   notes: string | null;
   /** "host:port" or "user:pass@host:port" — routes this account's login window. */
   proxy: string | null;
+  /**
+   * Date the account was created on its own platform (YYYY-MM-DD), if known.
+   * Distinct from `created_at`, which is when the entry was added to the Vault.
+   * Account age is what matters for warmed socials.
+   */
+  account_created_at: string | null;
   pinned: boolean;
   history: PasswordChange[];
   created_at: string;

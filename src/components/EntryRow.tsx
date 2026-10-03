@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTotp } from '../hooks/useTotp';
 import { isOld, isWeak } from '../lib/health';
-import { timeAgo } from '../lib/time';
+import { accountAge, accountDate, timeAgo } from '../lib/time';
 import { totpCode } from '../lib/totp';
 import type { Creator, Entry } from '../lib/types';
 import { ServiceIcon } from './ServiceIcon';
@@ -176,41 +176,69 @@ export function EntryRow({
           {entry.totp_secret ? <TotpBadge secret={entry.totp_secret} /> : null}
         </div>
 
+        <div
+          className="entry-created"
+          title={
+            entry.account_created_at
+              ? `Account created ${entry.account_created_at}`
+              : 'Account creation date not recorded'
+          }
+        >
+          {entry.account_created_at ? (
+            <>
+              <span className="created-date">{accountDate(entry.account_created_at)}</span>
+              <span className="created-age">{accountAge(entry.account_created_at)}</span>
+            </>
+          ) : (
+            <span className="created-empty">—</span>
+          )}
+        </div>
+
         <div className="entry-actions">
-          {entry.service_url && (
-            <button
-              className="btn btn-login"
-              title="Open this account in its own logged-in window"
-              onClick={handleLogin}
-            >
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-                <path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z" />
-              </svg>
-              Log in
-            </button>
-          )}
-          {entry.service_url && (
-            <button
-              className="icon-btn"
-              title="Open site in your browser"
-              onClick={() => window.vaultBridge?.openExternal(entry.service_url)}
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zM5 5h5V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-2v5H5V5z" />
-              </svg>
-            </button>
-          )}
-          {hasDetails && (
-            <button
-              className={`icon-btn ${expanded ? 'icon-btn-active' : ''}`}
-              title="Details"
-              onClick={() => setExpanded((e) => !e)}
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                <path d={expanded ? 'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z' : 'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'} />
-              </svg>
-            </button>
-          )}
+          {/* Both URL buttons keep their slot when there is no URL, for the same
+              reason as the details chevron: otherwise the column loses 2 slots. */}
+          <button
+            className={`btn btn-login ${entry.service_url ? '' : 'icon-btn-hidden'}`}
+            title="Open this account in its own logged-in window"
+            aria-hidden={!entry.service_url}
+            tabIndex={entry.service_url ? undefined : -1}
+            disabled={!entry.service_url}
+            onClick={handleLogin}
+          >
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+              <path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z" />
+            </svg>
+            Log in
+          </button>
+          <button
+            className={`icon-btn ${entry.service_url ? '' : 'icon-btn-hidden'}`}
+            title="Open site in your browser"
+            aria-hidden={!entry.service_url}
+            tabIndex={entry.service_url ? undefined : -1}
+            disabled={!entry.service_url}
+            onClick={() => window.vaultBridge?.openExternal(entry.service_url)}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zM5 5h5V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5h-2v5H5V5z" />
+            </svg>
+          </button>
+          {/*
+            Always rendered, hidden when there is nothing to expand. Dropping the
+            button from the DOM instead would make every row with details one slot
+            wider than its neighbours, so the whole action column zig-zags.
+          */}
+          <button
+            className={`icon-btn ${expanded ? 'icon-btn-active' : ''} ${hasDetails ? '' : 'icon-btn-hidden'}`}
+            title={hasDetails ? 'Details' : ''}
+            aria-hidden={!hasDetails}
+            tabIndex={hasDetails ? undefined : -1}
+            disabled={!hasDetails}
+            onClick={() => setExpanded((e) => !e)}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d={expanded ? 'M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z' : 'M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z'} />
+            </svg>
+          </button>
           <button className="icon-btn" title="Edit" disabled={readOnly} onClick={() => onEdit(entry)}>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
               <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />

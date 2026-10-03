@@ -51,6 +51,7 @@ export function EntryModal({
   const [totpSecret, setTotpSecret] = useState(initial?.totp_secret ?? '');
   const [proxy, setProxy] = useState(initial?.proxy ?? '');
   const [recovery, setRecovery] = useState(initial?.recovery ?? '');
+  const [accountCreated, setAccountCreated] = useState(initial?.account_created_at ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [fields, setFields] = useState<CustomField[]>(initial?.custom_fields ?? []);
   const [saving, setSaving] = useState(false);
@@ -94,6 +95,7 @@ export function EntryModal({
       password,
       totp_secret: totpSecret.trim() || null,
       proxy: proxy.trim() || null,
+      account_created_at: accountCreated || null,
       recovery: recovery.trim() || null,
       custom_fields: fields.filter((f) => f.key.trim() || f.value.trim()),
       notes: notes.trim() || null,
@@ -225,6 +227,23 @@ export function EntryModal({
               onChange={(e) => setProxy(e.target.value)}
             />
           </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-col">
+            <label className="form-label">Account created (optional)</label>
+            <input
+              className="input"
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              value={accountCreated}
+              onChange={(e) => setAccountCreated(e.target.value)}
+            />
+            <span className="form-hint">
+              When the account itself was made — not when you added it here.
+            </span>
+          </div>
+          <div className="form-col" />
         </div>
 
         <label className="form-label">Recovery info (optional)</label>

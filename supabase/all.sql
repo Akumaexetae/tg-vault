@@ -5,7 +5,8 @@
 -- or half-migrated — up to the current version.
 --
 -- Storage buckets still have to be created in the dashboard (Storage → New
--- bucket): "avatars" public with a 2 MB limit, "documents" private with 10 MB.
+-- bucket): "avatars" public with a 2 MB limit, "documents" private with 10 MB,
+-- and "canvas-images" public with 5 MB.
 -- The SQL editor cannot always write to storage.buckets.
 
 
@@ -331,3 +332,88 @@ begin
   alter publication supabase_realtime add table canvas_objects;
 exception when duplicate_object then null;
 end $$;
+
+
+-- =====================================================================
+-- migration-008.sql
+-- =====================================================================
+
+-- T&G Vault — migration 008: canvas images.
+-- Run once in the Supabase SQL editor. Safe to re-run.
+--
+-- The bucket itself may need creating in the dashboard if this insert is
+-- rejected: Storage → New bucket → name "canvas-images", public, 5 MB.
+
+insert into storage.buckets (id, name, public, file_size_limit)
+  values ('canvas-images', 'canvas-images', true, 5242880)
+  on conflict (id) do update set public = true, file_size_limit = 5242880;
+
+drop policy if exists "canvas_images_all" on storage.objects;
+create policy "canvas_images_all" on storage.objects
+  for all using (bucket_id = 'canvas-images') with check (bucket_id = 'canvas-images');
+
+
+-- =====================================================================
+-- migration-009.sql
+-- =====================================================================
+
+-- T&G Vault — migration 009: arrows that stay attached to shapes.
+-- Run once in the Supabase SQL editor. Safe to re-run.
+
+alter table canvas_objects add column if not exists from_id uuid
+  references canvas_objects(id) on delete set null;
+alter table canvas_objects add column if not exists to_id uuid
+  references canvas_objects(id) on delete set null;
+
+
+-- =====================================================================
+-- migration-010.sql
+-- =====================================================================
+
+-- T&G Vault — migration 010: daily earnings detail.
+-- Run once in the Supabase SQL editor. Safe to re-run.
+--
+-- creator_earnings stays the canonical MONTHLY figure that payouts are based
+-- on. This table holds the per-day detail that statement imports already know
+-- but used to discard, so charts can show day and week resolution.
+--
+-- Precedence rule (enforced in lib/analytics.ts, not here): for a given
+-- creator and month, if daily rows exist they are the truth for charting and
+-- the monthly row is ignored. Summing both would double the revenue.
+
+create table if not exists creator_daily (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references creators(id) on delete restrict,
+  day date not null,
+  gross numeric not null,
+  currency text not null default 'EUR',
+  created_at timestamptz not null default now(),
+  updated_by text not null,
+  unique (creator_id, day)
+);
+
+create index if not exists creator_daily_day on creator_daily (day);
+create index if not exists creator_daily_creator on creator_daily (creator_id);
+
+alter table creator_daily disable row level security;
+drop policy if exists "vault_all" on creator_daily;
+create policy "vault_all" on creator_daily for all using (true) with check (true);
+
+do $$
+begin
+  alter publication supabase_realtime add table creator_daily;
+exception when duplicate_object then null;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- 011 — account creation date
+-- ---------------------------------------------------------------------------
+
+-- entries.created_at is when the row was added to the Vault. For a warmed
+-- social account what matters is how old the ACCOUNT is, which is a different
+-- date and often years apart. Nullable: most entries will never know it.
+alter table entries add column if not exists account_created_at date;
+
+comment on column entries.account_created_at is
+  'Date the account was created on its own platform. Not the vault row date (created_at).';

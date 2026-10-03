@@ -593,7 +593,10 @@ h2 {
    usernames, passwords and 2FA codes line up down the list whatever each row holds. */
 .entry-main-account {
   display: grid;
-  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 210px;
+  /* pin · icon · service+tags · username · password · 2FA · created · actions.
+     Every element in the row needs its own track here — an extra child with no
+     track lands in an implicit column and pushes the actions onto a second line. */
+  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 78px 210px;
 }
 .entry-main-account .entry-actions {
   justify-content: flex-end;
@@ -659,6 +662,32 @@ h2 {
   flex-shrink: 0;
 }
 
+/* Account age — how old the account itself is, not the vault row.
+   Width comes from the grid track, not from here. */
+.entry-created {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.25;
+}
+.created-date {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.created-age {
+  font-size: 11px;
+  color: var(--muted, #7b8794);
+  white-space: nowrap;
+}
+.created-empty {
+  font-size: 13px;
+  color: var(--muted, #7b8794);
+  opacity: 0.5;
+}
+
 .totp-badge {
   display: inline-flex;
   align-items: center;
@@ -706,6 +735,18 @@ h2 {
 .icon-btn:disabled {
   opacity: 0.35;
   cursor: default;
+}
+
+/*
+ * Keeps an action's slot in the row without showing it. Rows differ in which
+ * actions apply (no URL = no login/open, no extra info = no details chevron);
+ * dropping those buttons from the layout made the action column jump about from
+ * row to row. visibility:hidden holds the space, pointer-events stops it being
+ * clickable, and the button is also disabled and out of the tab order.
+ */
+.icon-btn-hidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 .icon-btn-danger:hover {
   background: #ffe4e6;
