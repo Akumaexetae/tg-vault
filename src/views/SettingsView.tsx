@@ -5,6 +5,7 @@ import {
   type BackupSettings,
 } from '../lib/autoBackup';
 import { loadPreference, savePreference } from '../lib/settings';
+import { applyTheme, loadTheme, watchSystemTheme, type Theme } from '../lib/theme';
 
 interface Props {
   version: string;
@@ -23,6 +24,19 @@ export function SettingsView({ version, user, onBackupNow, onDisconnect }: Props
   });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [theme, setTheme] = useState<Theme>(() => loadTheme());
+
+  function changeTheme(next: Theme) {
+    setTheme(next);
+    savePreference('theme', next);
+    applyTheme(next);
+  }
+
+  // On "System", follow the OS while the app is open, not just at launch.
+  useEffect(() => {
+    if (theme !== 'system') return;
+    return watchSystemTheme(() => applyTheme('system'));
+  }, [theme]);
 
   useEffect(() => {
     window.vaultBridge?.driveStatus().then(setDrive).catch(() => {});
@@ -65,6 +79,35 @@ export function SettingsView({ version, user, onBackupNow, onDisconnect }: Props
       </div>
 
       <div className="settings-stack">
+        <section className="card settings-card">
+          <h2>Appearance</h2>
+          <p className="muted settings-lead">
+            Stored on this PC, not in the vault — switching here doesn't change
+            anyone else's screen.
+          </p>
+
+          <div className="theme-choice" role="radiogroup" aria-label="Theme">
+            {([
+              ['system', 'System', 'Follow Windows'],
+              ['light', 'Light', 'Always light'],
+              ['dark', 'Dark', 'Always dark'],
+            ] as [Theme, string, string][]).map(([value, label, hint]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={theme === value}
+                className={`theme-option ${theme === value ? 'theme-option-on' : ''}`}
+                onClick={() => changeTheme(value)}
+              >
+                <span className={`theme-swatch theme-swatch-${value}`} aria-hidden="true" />
+                <span className="theme-option-label">{label}</span>
+                <span className="theme-option-hint">{hint}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="card settings-card">
           <h2>Automatic backups</h2>
           <p className="muted settings-lead">

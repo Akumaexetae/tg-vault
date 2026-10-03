@@ -1,17 +1,125 @@
 /* T&G Vault — bright OnlyFans-blue theme (GeeLark-style gradient). */
 
+/* Light is the default and needs no attribute, so the app still renders
+   correctly if the theme script never runs. Dark overrides below. */
 :root {
   --accent: #00aff0;
   --accent-dark: #0090c9;
   --accent-soft: #e3f6ff;
+  --accent-ghost: #d2f0ff;
+  --accent-ghost-2: #cfeefb;
+  --purple: #8e44ad;
   --ink: #17303d;
   --ink-soft: #5b7585;
+  --ink-faint: #c9d6de;
+
+  /* Surfaces. --card is kept as the old name for compatibility. */
   --card: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7fcff;
+  --surface-3: #f2f9fd;
+  --app-bg: linear-gradient(165deg, #ffffff 0%, #eaf7fe 40%, #bfe9fc 100%);
+
+  /* Frosted panels that sit ON the app background, so they must flip. */
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-2: rgba(255, 255, 255, 0.6);
+  --glass-strong: rgba(255, 255, 255, 0.85);
+  --sidebar-bg: rgba(255, 255, 255, 0.75);
+
+  /* Content sitting ON the accent. Stays light in BOTH themes — the accent
+     is the same blue either way, so white text stays correct on it. */
+  --on-accent: #ffffff;
+  --on-accent-soft: rgba(255, 255, 255, 0.18);
+  --on-accent-soft-2: rgba(255, 255, 255, 0.25);
+  --on-accent-soft-3: rgba(255, 255, 255, 0.3);
+  --on-accent-border: rgba(255, 255, 255, 0.6);
+
   --danger: #e05260;
   --warning: #e08a19;
   --border: rgba(0, 100, 150, 0.12);
+  --border-strong: rgba(0, 100, 150, 0.28);
   --shadow: 0 2px 10px rgba(0, 80, 130, 0.08);
+  --shadow-md: 0 6px 18px rgba(0, 80, 130, 0.16);
+  --shadow-lg: 0 20px 60px rgba(0, 60, 100, 0.18);
+  --shadow-xl: 0 24px 60px rgba(0, 50, 90, 0.3);
+  --focus-ring: rgba(0, 175, 240, 0.2);
+  --overlay: rgba(10, 40, 60, 0.35);
+  --scrim: rgba(0, 0, 0, 0.35);
+  --scrim-strong: rgba(0, 0, 0, 0.55);
+
+  /* Status pills: paired background + foreground so contrast is controlled. */
+  --pill-good-bg: #dff7e4;
+  --pill-good-fg: #177a35;
+  --pill-warn-bg: #ffe9d6;
+  --pill-warn-fg: #b45309;
+  --pill-amber-bg: #fff0d6;
+  --pill-amber-fg: #9a6207;
+  --pill-bad-bg: #ffe0e3;
+  --pill-bad-fg: #b3253a;
+  --pill-neutral-bg: #ececf5;
+  --pill-neutral-fg: #5b5b7a;
+  --pill-soft-bad-bg: #ffe4e6;
+
+  --canvas-bg: #fbfdff;
+  --canvas-dot: rgba(0, 100, 150, 0.16);
+
   --radius: 12px;
+}
+
+/* Dark. The accent blue is unchanged — it is the brand, and it still reads
+   on a dark surface. What changes is everything behind and around it. */
+:root[data-theme='dark'] {
+  --accent-soft: rgba(0, 175, 240, 0.16);
+  --accent-ghost: rgba(0, 175, 240, 0.22);
+  --accent-ghost-2: rgba(0, 175, 240, 0.18);
+  --purple: #a86cc8;
+  --ink: #e6f1f7;
+  --ink-soft: #94aebc;
+  --ink-faint: #5a7180;
+
+  --card: #16262f;
+  --surface: #16262f;
+  --surface-2: #1b2e39;
+  --surface-3: #1a2b35;
+  --app-bg: linear-gradient(165deg, #0d1920 0%, #102230 45%, #0b1821 100%);
+
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-2: rgba(255, 255, 255, 0.07);
+  --glass-strong: rgba(255, 255, 255, 0.12);
+  --sidebar-bg: rgba(14, 28, 36, 0.8);
+
+  --border: rgba(145, 200, 225, 0.14);
+  --border-strong: rgba(145, 200, 225, 0.3);
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 24px 60px rgba(0, 0, 0, 0.7);
+  --focus-ring: rgba(0, 175, 240, 0.35);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --scrim-strong: rgba(0, 0, 0, 0.7);
+
+  /* Tinted dark backgrounds rather than the light pastels, which glare. */
+  --pill-good-bg: #15301f;
+  --pill-good-fg: #6ddb94;
+  --pill-warn-bg: #3a2a12;
+  --pill-warn-fg: #f0b86b;
+  --pill-amber-bg: #342712;
+  --pill-amber-fg: #e0b065;
+  --pill-bad-bg: #3a1b22;
+  --pill-bad-fg: #ff92a1;
+  --pill-neutral-bg: #262636;
+  --pill-neutral-fg: #adadc6;
+  --pill-soft-bad-bg: #3a1f24;
+
+  /* The canvas deliberately stays LIGHT in dark mode. Object colours (notes,
+     text, shapes) are user data stored in Postgres and shared between both
+     founders — text defaults to dark ink, so a dark board would make existing
+     content invisible. Recolouring saved objects to suit a local display
+     preference would be wrong, so the board stays a light document surface,
+     as Figma and Miro do. */
+  --canvas-bg: #fbfdff;
+  --canvas-dot: rgba(0, 100, 150, 0.16);
 }
 
 * {
@@ -28,7 +136,7 @@ body,
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--ink);
-  background: linear-gradient(165deg, #ffffff 0%, #eaf7fe 40%, #bfe9fc 100%);
+  background: var(--app-bg);
   background-attachment: fixed;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
@@ -61,7 +169,7 @@ h2 {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(8px);
   border-right: 1px solid var(--border);
 }
@@ -148,11 +256,11 @@ h2 {
 .nav-group-chevron:hover,
 .nav-group-add:hover {
   opacity: 1;
-  background: rgba(0, 130, 190, 0.12);
+  background: var(--accent-soft);
 }
 .nav-item-active .nav-group-chevron:hover,
 .nav-item-active .nav-group-add:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--on-accent-soft-2);
 }
 .nav-group-add:disabled {
   opacity: 0.3;
@@ -193,10 +301,10 @@ h2 {
 }
 .nav-item-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .nav-item-active .creator-avatar {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--on-accent);
 }
 .nav-label {
   white-space: nowrap;
@@ -266,7 +374,7 @@ h2 {
 .pin-btn {
   border: none;
   background: transparent;
-  color: #c9d6de;
+  color: var(--ink-faint);
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
@@ -274,10 +382,10 @@ h2 {
   flex-shrink: 0;
 }
 .pin-btn:hover {
-  color: #f0b400;
+  color: var(--warning);
 }
 .pin-btn-on {
-  color: #f5b800;
+  color: var(--warning);
 }
 .pin-btn:disabled {
   opacity: 0.4;
@@ -290,16 +398,16 @@ h2 {
   flex-wrap: wrap;
 }
 .pill-weak {
-  background: #ffe9d6;
-  color: #b45309;
+  background: var(--pill-warn-bg);
+  color: var(--pill-warn-fg);
 }
 .pill-reused {
-  background: #ffe0e3;
-  color: #b3253a;
+  background: var(--pill-bad-bg);
+  color: var(--pill-bad-fg);
 }
 .pill-old {
-  background: #ececf5;
-  color: #5b5b7a;
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-fg);
 }
 
 .history-pw {
@@ -323,10 +431,10 @@ h2 {
   border-color: var(--accent);
 }
 .stat-warn {
-  color: #d97706;
+  color: var(--pill-warn-fg);
 }
 .stat-ok {
-  color: #16a34a;
+  color: var(--pill-good-fg);
 }
 
 .dash-pinned {
@@ -376,7 +484,7 @@ h2 {
   font-size: 12.5px;
   white-space: pre-wrap;
   word-break: break-word;
-  background: #f7fcff;
+  background: var(--surface-2);
   border-radius: 8px;
   padding: 10px;
   max-height: 220px;
@@ -395,9 +503,9 @@ h2 {
 .palette {
   width: 620px;
   max-width: calc(100vw - 60px);
-  background: #fff;
+  background: var(--surface);
   border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 50, 90, 0.3);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
 }
 .palette-input {
@@ -462,7 +570,7 @@ h2 {
 
 .offline-banner {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
   text-align: center;
   padding: 7px;
   font-weight: 600;
@@ -480,17 +588,17 @@ h2 {
   justify-content: center;
   gap: 12px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   padding: 7px;
   font-weight: 600;
 }
 .update-btn {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--on-accent-soft);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
 }
 .update-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--on-accent-soft-3);
 }
 
 .view-header {
@@ -654,7 +762,7 @@ h2 {
   white-space: nowrap;
 }
 .password-mask:hover {
-  background: #d2f0ff;
+  background: var(--accent-ghost);
 }
 
 .entry-totp {
@@ -679,12 +787,12 @@ h2 {
 }
 .created-age {
   font-size: 11px;
-  color: var(--muted, #7b8794);
+  color: var(--ink-soft);
   white-space: nowrap;
 }
 .created-empty {
   font-size: 13px;
-  color: var(--muted, #7b8794);
+  color: var(--ink-soft);
   opacity: 0.5;
 }
 
@@ -693,7 +801,7 @@ h2 {
   align-items: center;
   gap: 6px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   border-radius: 99px;
   padding: 3px 10px 3px 5px;
   cursor: pointer;
@@ -749,7 +857,7 @@ h2 {
   pointer-events: none;
 }
 .icon-btn-danger:hover {
-  background: #ffe4e6;
+  background: var(--pill-soft-bad-bg);
   color: var(--danger);
 }
 .icon-btn-active {
@@ -816,7 +924,7 @@ h2 {
   flex-shrink: 0;
 }
 .service-icon-img {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 .service-icon-img img {
@@ -834,7 +942,7 @@ h2 {
 /* --- Buttons & inputs ------------------------------------------------ */
 .btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   border-radius: 9px;
   padding: 8px 14px;
@@ -853,7 +961,7 @@ h2 {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-dark);
@@ -866,7 +974,7 @@ h2 {
 .btn-danger {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 .btn-login {
   display: inline-flex;
@@ -880,7 +988,7 @@ h2 {
 }
 .btn-login:hover {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .btn-ghost {
   border-style: dashed;
@@ -894,14 +1002,14 @@ h2 {
   border-radius: 9px;
   padding: 8px 12px;
   font-size: 13.5px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   outline: none;
   width: 100%;
 }
 .input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 175, 240, 0.15);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .input-small {
   width: auto;
@@ -917,7 +1025,7 @@ h2 {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 40, 60, 0.35);
+  background: var(--overlay);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -926,14 +1034,14 @@ h2 {
 }
 
 .modal {
-  background: #fff;
+  background: var(--surface);
   border-radius: 16px;
   padding: 22px 24px;
   width: 640px;
   max-width: calc(100vw - 60px);
   max-height: calc(100vh - 60px);
   overflow-y: auto;
-  box-shadow: 0 18px 50px rgba(0, 50, 90, 0.25);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -995,7 +1103,7 @@ h2 {
   gap: 8px;
   border: 1px solid var(--border);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   padding: 6px 8px;
   cursor: pointer;
   font-size: 12.5px;
@@ -1007,7 +1115,7 @@ h2 {
 }
 .service-choice-active {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 175, 240, 0.25);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 .service-choice span:last-child {
   overflow: hidden;
@@ -1024,9 +1132,9 @@ h2 {
 }
 
 .identity-card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 60, 100, 0.18);
+  box-shadow: var(--shadow-lg);
   padding: 40px 48px;
   text-align: center;
 }
@@ -1056,13 +1164,13 @@ h2 {
   gap: 6px;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--surface);
   padding: 22px 34px;
   cursor: pointer;
 }
 .identity-choice:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 175, 240, 0.2);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .identity-avatar {
@@ -1070,7 +1178,7 @@ h2 {
   height: 52px;
   border-radius: 50%;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 24px;
   font-weight: 800;
   display: flex;
@@ -1078,7 +1186,7 @@ h2 {
   justify-content: center;
 }
 .identity-choice:last-child .identity-avatar {
-  background: #8e44ad;
+  background: var(--purple);
 }
 .identity-name {
   font-weight: 700;
@@ -1137,7 +1245,7 @@ h2 {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 800;
   font-size: 13px;
   display: inline-flex;
@@ -1149,7 +1257,7 @@ h2 {
   background: var(--accent);
 }
 .avatar-gabriel {
-  background: #8e44ad;
+  background: var(--purple);
 }
 
 .activity-text {
@@ -1165,7 +1273,7 @@ h2 {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 11px;
   font-weight: 800;
   display: inline-flex;
@@ -1177,9 +1285,9 @@ h2 {
 /* --- Creator dossier ----------------------------------------------------- */
 .dossier-hero {
   background: linear-gradient(115deg, #00aff0 0%, #0090c9 50%, #7d3ba8 100%);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--radius);
-  box-shadow: 0 3px 14px rgba(0, 120, 180, 0.25);
+  box-shadow: var(--shadow-md);
   padding: 16px 18px;
   display: flex;
   gap: 18px;
@@ -1208,8 +1316,8 @@ h2 {
   width: 46px;
   height: 46px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: var(--on-accent-soft-2);
+  border: 2px solid var(--on-accent-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1260,7 +1368,7 @@ h2 {
   position: absolute;
   top: 14px;
   right: 16px;
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--on-accent-soft-2);
   border-radius: 99px;
   padding: 3px 11px;
   font-size: 9.5px;
@@ -1354,7 +1462,7 @@ h2 {
 }
 .tile-bars i {
   flex: 1;
-  background: #cfeefb;
+  background: var(--accent-ghost-2);
   border-radius: 3px 3px 0 0;
 }
 .tile-bars i.hi {
@@ -1421,7 +1529,7 @@ h2 {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 800;
   flex-shrink: 0;
   overflow: hidden;
@@ -1462,7 +1570,7 @@ h2 {
 }
 .chip {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   border-radius: 99px;
   padding: 4px 12px;
   font-size: 12px;
@@ -1476,7 +1584,7 @@ h2 {
 .chip-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .creator-grid {
@@ -1500,7 +1608,7 @@ h2 {
 }
 .creator-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 80, 130, 0.16);
+  box-shadow: var(--shadow-md);
 }
 .creator-card-dim {
   opacity: 0.6;
@@ -1515,8 +1623,8 @@ h2 {
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  color: #fff;
+  background: var(--scrim);
+  color: var(--on-accent);
   border-radius: 99px;
   padding: 2px 9px;
   font-size: 8.5px;
@@ -1528,8 +1636,8 @@ h2 {
   position: absolute;
   left: 12px;
   bottom: -22px;
-  border: 3px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 60, 100, 0.2);
+  border: 3px solid var(--on-accent);
+  box-shadow: var(--shadow);
 }
 .creator-card-body {
   padding: 28px 12px 12px;
@@ -1563,7 +1671,7 @@ h2 {
 }
 
 .creator-card-add {
-  border: 1.5px dashed rgba(0, 100, 150, 0.28);
+  border: 1.5px dashed var(--border-strong);
   background: transparent;
   box-shadow: none;
   display: flex;
@@ -1581,7 +1689,7 @@ h2 {
   color: var(--accent);
 }
 .creator-card-add:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--glass-2);
   border-color: var(--accent);
   transform: none;
   box-shadow: none;
@@ -1590,18 +1698,18 @@ h2 {
 /* --- Home ---------------------------------------------------------------- */
 .stat-card-primary {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(0, 175, 240, 0.16), var(--shadow);
+  box-shadow: 0 0 0 2px var(--focus-ring), var(--shadow);
 }
 .stat-accent {
   color: var(--accent-dark);
 }
 .delta-up {
-  color: #177a35;
+  color: var(--pill-good-fg);
   font-size: 11.5px;
   font-weight: 700;
 }
 .delta-down {
-  color: #b3253a;
+  color: var(--pill-bad-fg);
   font-size: 11.5px;
   font-weight: 700;
 }
@@ -1747,12 +1855,12 @@ h2 {
   margin-left: auto;
 }
 .pill-paid {
-  background: #dff7e4;
-  color: #177a35;
+  background: var(--pill-good-bg);
+  color: var(--pill-good-fg);
 }
 .pill-unpaid {
-  background: #fff0d6;
-  color: #9a6207;
+  background: var(--pill-amber-bg);
+  color: var(--pill-amber-fg);
 }
 
 .import-preview {
@@ -1784,14 +1892,14 @@ h2 {
 }
 
 .board-lane {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--glass);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px;
   min-height: 240px;
 }
 .board-lane-over {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-strong);
   border-color: var(--accent);
 }
 
@@ -1876,8 +1984,8 @@ h2 {
   color: var(--accent-dark);
 }
 .pill-overdue {
-  background: #ffe0e3;
-  color: #b3253a;
+  background: var(--pill-bad-bg);
+  color: var(--pill-bad-fg);
 }
 
 /* Drop zones between cards — invisible until something is dragged over them. */
@@ -1920,7 +2028,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: 0;
@@ -1958,7 +2066,7 @@ h2 {
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border-strong);
   cursor: pointer;
   padding: 0;
 }
@@ -1972,8 +2080,8 @@ h2 {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background-color: #fbfdff;
-  background-image: radial-gradient(rgba(0, 100, 150, 0.16) 1px, transparent 1px);
+  background-color: var(--canvas-bg);
+  background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
   cursor: default;
@@ -2002,12 +2110,12 @@ h2 {
 }
 .canvas-note {
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.18);
+  box-shadow: var(--shadow);
 }
 .canvas-box {
   border: 2px solid var(--accent);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--glass);
 }
 .canvas-text {
   font-weight: 700;
@@ -2023,7 +2131,7 @@ h2 {
   width: 100%;
 }
 .canvas-placeholder {
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--ink-faint);
   font-style: normal;
 }
 .canvas-text-input {
@@ -2045,21 +2153,21 @@ h2 {
   height: 12px;
   border-radius: 3px;
   background: var(--accent);
-  border: 2px solid #fff;
+  border: 2px solid var(--on-accent);
   cursor: nwse-resize;
 }
 
 .canvas-ellipse {
   border: 2px solid var(--accent);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--glass);
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 .canvas-diamond {
   border: 2px solid var(--accent);
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--glass);
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -2068,10 +2176,10 @@ h2 {
 }
 
 .canvas-table {
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.14);
+  box-shadow: var(--shadow);
   padding: 0;
   overflow: visible;
 }
@@ -2122,15 +2230,15 @@ table.canvas-table {
 }
 .canvas-object.canvas-image {
   padding: 0;
-  background: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 2px 8px rgba(0, 60, 100, 0.16);
+  background: var(--glass-2);
+  box-shadow: var(--shadow);
   border-radius: 6px;
 }
 
 .canvas-marquee {
   position: absolute;
   border: 1.5px dashed var(--accent);
-  background: rgba(0, 175, 240, 0.09);
+  background: var(--accent-soft);
   pointer-events: none;
 }
 
@@ -2150,7 +2258,7 @@ table.canvas-table {
 }
 .canvas-arrow-handle {
   fill: var(--accent);
-  stroke: #fff;
+  stroke: var(--on-accent);
   stroke-width: 2;
   pointer-events: all;
   cursor: grab;
@@ -2167,7 +2275,7 @@ table.canvas-table {
   z-index: 20;
 }
 .canvas-cursor-name {
-  color: #fff;
+  color: var(--on-accent);
   font-size: 10px;
   font-weight: 700;
   border-radius: 4px;
@@ -2271,7 +2379,7 @@ table.canvas-table {
 }
 .drive-tile:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 80, 130, 0.16);
+  box-shadow: var(--shadow-md);
 }
 
 .drive-thumb {
@@ -2280,7 +2388,7 @@ table.canvas-table {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f2f9fd;
+  background: var(--surface-3);
   color: var(--accent-dark);
   overflow: hidden;
 }
@@ -2309,8 +2417,8 @@ table.canvas-table {
   position: absolute;
   right: 7px;
   bottom: 7px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
+  background: var(--scrim-strong);
+  color: var(--on-accent);
   border-radius: 4px;
   font-size: 10px;
   padding: 1px 6px;
@@ -2456,7 +2564,7 @@ table.canvas-table {
   height: 8px;
 }
 .chart-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 100, 150, 0.25);
+  background: var(--border-strong);
   border-radius: 99px;
 }
 .chart-scroll::-webkit-scrollbar-track {
@@ -2498,10 +2606,10 @@ table.canvas-table {
   position: absolute;
   top: 14px;
   right: 18px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 9px;
-  box-shadow: 0 4px 14px rgba(0, 60, 100, 0.16);
+  box-shadow: var(--shadow-md);
   padding: 8px 11px;
   display: flex;
   flex-direction: column;
@@ -2558,7 +2666,7 @@ table.canvas-table {
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  background: #fff;
+  background: var(--surface);
 }
 .analytics-table td {
   padding: 6px;
@@ -2587,8 +2695,8 @@ table.canvas-table {
   padding: 10px 16px;
   border-radius: 10px;
   font-weight: 600;
-  color: #fff;
-  box-shadow: 0 6px 20px rgba(0, 40, 70, 0.25);
+  color: var(--on-accent);
+  box-shadow: var(--shadow-md);
   animation: toast-in 0.15s ease-out;
 }
 .toast-ok {
@@ -2628,4 +2736,75 @@ table.canvas-table {
 }
 .creator-month-row .money-creator {
   cursor: default;
+}
+
+/* ---- Theme picker (Settings → Appearance) ---------------------------- */
+.theme-choice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.theme-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.theme-option:hover {
+  border-color: var(--accent);
+}
+
+.theme-option-on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.theme-option-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.theme-option-hint {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* Each swatch previews its own theme, so the choice reads without labels. */
+.theme-swatch {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+
+.theme-swatch-light {
+  background: linear-gradient(165deg, #ffffff 0%, #eaf7fe 40%, #bfe9fc 100%);
+}
+
+.theme-swatch-dark {
+  background: linear-gradient(165deg, #0d1920 0%, #102230 45%, #0b1821 100%);
+}
+
+/* Split down the middle: light on the left, dark on the right. */
+.theme-swatch-system {
+  background:
+    linear-gradient(165deg, #ffffff 0%, #eaf7fe 40%, #bfe9fc 100%) left / 50% 100% no-repeat,
+    linear-gradient(165deg, #0d1920 0%, #102230 45%, #0b1821 100%) right / 50% 100% no-repeat;
+}
+
+@media (max-width: 640px) {
+  .theme-choice {
+    grid-template-columns: 1fr;
+  }
 }
