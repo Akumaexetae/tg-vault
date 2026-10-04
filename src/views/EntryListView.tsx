@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { EntryRow } from '../components/EntryRow';
 import { sortByPassword } from '../lib/search';
+import { loadPreference, savePreference } from '../lib/settings';
+import { groupByDay } from '../lib/time';
 import type { Creator, Entry } from '../lib/types';
 
 interface Props {
@@ -37,7 +39,20 @@ export function EntryListView({
 }: Props) {
   const [byPassword, setByPassword] = useState(false);
   const [revealAll, setRevealAll] = useState(false);
+  // Remembered per machine: whoever groups by date tends to want it every time.
+  const [byDate, setByDate] = useState(() => loadPreference('group-by-date', false));
   const shown = byPassword ? sortByPassword(entries) : entries;
+
+  function toggleByDate() {
+    setByDate((on) => {
+      savePreference('group-by-date', !on);
+      return !on;
+    });
+  }
+
+  // Newest day first. Grouping is on when the row reached the vault, which is
+  // not the same as how old the account is — see entries.account_created_at.
+  const groups = byDate ? groupByDay(shown, (e) => e.created_at) : [];
 
   return (
     <div className="view">
@@ -66,6 +81,16 @@ export function EntryListView({
               {byPassword ? 'Sorted by password ✕' : 'Sort by password'}
             </button>
           )}
+          {entries.length > 1 && (
+            <button
+              className={byDate ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
+              aria-pressed={byDate}
+              title="Group accounts by the day they were added to the vault"
+              onClick={toggleByDate}
+            >
+              {byDate ? 'Grouped by date ✕' : 'Group by date'}
+            </button>
+          )}
           <button className="btn btn-primary" disabled={readOnly} onClick={onAdd}>
             + Add account
           </button>
@@ -78,20 +103,45 @@ export function EntryListView({
         </div>
       ) : (
         <div className="entry-list">
-          {shown.map((e) => (
-            <EntryRow
-              key={e.id}
-              entry={e}
-              creators={creators}
-              readOnly={readOnly}
-              showCreator={showCreator}
-              reused={reusedIds.has(e.id)}
-              revealAll={revealAll}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onTogglePin={onTogglePin}
-            />
-          ))}
+          {byDate
+            ? groups.map((g) => (
+                <div key={g.key} className="entry-day-group">
+                  <div className="entry-day-header">
+                    <span className="entry-day-label">{g.heading}</span>
+                    <span className="entry-day-count">
+                      {g.items.length} {g.items.length === 1 ? 'account' : 'accounts'}
+                    </span>
+                  </div>
+                  {g.items.map((e) => (
+                    <EntryRow
+                      key={e.id}
+                      entry={e}
+                      creators={creators}
+                      readOnly={readOnly}
+                      showCreator={showCreator}
+                      reused={reusedIds.has(e.id)}
+                      revealAll={revealAll}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onTogglePin={onTogglePin}
+                    />
+                  ))}
+                </div>
+              ))
+            : shown.map((e) => (
+                <EntryRow
+                  key={e.id}
+                  entry={e}
+                  creators={creators}
+                  readOnly={readOnly}
+                  showCreator={showCreator}
+                  reused={reusedIds.has(e.id)}
+                  revealAll={revealAll}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onTogglePin={onTogglePin}
+                />
+              ))}
         </div>
       )}
     </div>

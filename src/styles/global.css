@@ -2808,3 +2808,36 @@ table.canvas-table {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Date dividers in the account list ------------------------------- */
+.entry-day-group {
+  display: contents;
+}
+
+.entry-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 2px 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The first heading sits right under the toolbar, so it needs no top gap. */
+.entry-day-group:first-child .entry-day-header {
+  margin-top: 4px;
+}
+
+.entry-day-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.entry-day-count {
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
