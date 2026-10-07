@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useTotp } from '../hooks/useTotp';
 import { isOld, isWeak } from '../lib/health';
+import { instagramProfileUrl, isInstagram } from '../lib/instagram';
+import { loadPreference } from '../lib/settings';
 import { accountAge, accountDate, timeAgo } from '../lib/time';
 import { totpCode } from '../lib/totp';
 import type { Creator, Entry } from '../lib/types';
@@ -119,6 +121,29 @@ export function EntryRow({
     });
   };
 
+  // Preview the profile using the viewing account's session, so nobody has to
+  // sign into a warmed account just to read its own numbers. Hidden unless a
+  // viewer is set, and never shown on the viewer's own row.
+  const viewerPref = loadPreference<{ id: string; proxy: string | null }>(
+    'instagram-viewer',
+    { id: '', proxy: null },
+  );
+  const viewerId = viewerPref.id;
+  const profileUrl = isInstagram(entry.service_key)
+    ? instagramProfileUrl(entry.username)
+    : null;
+  const canPreview = !!profileUrl && !!viewerId && viewerId !== entry.id;
+
+  const handlePreview = () => {
+    if (!profileUrl || !viewerId) return;
+    window.vaultBridge?.openProfile({
+      viewerId,
+      url: profileUrl,
+      title: entry.username,
+      proxy: viewerPref.proxy,
+    });
+  };
+
   const handleLogout = async () => {
     await window.vaultBridge?.logoutAccount(entry.id);
     toast('Session cleared for this account');
@@ -209,6 +234,20 @@ export function EntryRow({
               <path d="M11 7 9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-8v2h8v14z" />
             </svg>
             Log in
+          </button>
+          {/* Same slot discipline as the other actions: always rendered, hidden
+              when unavailable, so the column never shifts between rows. */}
+          <button
+            className={`icon-btn ${canPreview ? '' : 'icon-btn-hidden'}`}
+            title="Preview this profile from your viewing account"
+            aria-hidden={!canPreview}
+            tabIndex={canPreview ? undefined : -1}
+            disabled={!canPreview}
+            onClick={handlePreview}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+            </svg>
           </button>
           <button
             className={`icon-btn ${entry.service_url ? '' : 'icon-btn-hidden'}`}

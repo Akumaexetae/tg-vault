@@ -18,6 +18,12 @@ declare global {
         totp: string | null;
         proxy: string | null;
       }) => Promise<void>;
+      openProfile: (opts: {
+        viewerId: string;
+        url: string;
+        title: string;
+        proxy: string | null;
+      }) => Promise<void>;
       logoutAccount: (id: string) => Promise<void>;
       saveBackup: (opts: {
         filename: string;

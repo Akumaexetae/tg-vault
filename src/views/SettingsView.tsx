@@ -6,15 +6,18 @@ import {
 } from '../lib/autoBackup';
 import { loadPreference, savePreference } from '../lib/settings';
 import { applyTheme, loadTheme, watchSystemTheme, type Theme } from '../lib/theme';
+import { isInstagram, instagramHandle } from '../lib/instagram';
+import type { Entry } from '../lib/types';
 
 interface Props {
   version: string;
   user: string;
+  entries: Entry[];
   onBackupNow: () => Promise<void>;
   onDisconnect: () => void;
 }
 
-export function SettingsView({ version, user, onBackupNow, onDisconnect }: Props) {
+export function SettingsView({ version, user, entries, onBackupNow, onDisconnect }: Props) {
   const [backup, setBackup] = useState<BackupSettings>(() =>
     loadPreference<BackupSettings>('backup', DEFAULT_BACKUP),
   );
@@ -25,6 +28,23 @@ export function SettingsView({ version, user, onBackupNow, onDisconnect }: Props
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [theme, setTheme] = useState<Theme>(() => loadTheme());
+  const [viewer, setViewer] = useState<string>(
+    () => loadPreference<{ id: string }>('instagram-viewer', { id: '' }).id,
+  );
+
+  // Only accounts with a usable handle can act as a viewer.
+  const viewerOptions = entries
+    .filter((e) => isInstagram(e.service_key) && instagramHandle(e.username))
+    .sort((a, b) => a.username.localeCompare(b.username));
+
+  // The viewer's proxy is stored alongside its id so a row can open a window
+  // without the entry list being threaded through every view. It is a copy, so
+  // changing that account's proxy means re-picking it here.
+  function chooseViewer(id: string) {
+    setViewer(id);
+    const chosen = entries.find((e) => e.id === id);
+    savePreference('instagram-viewer', { id, proxy: chosen?.proxy ?? null });
+  }
 
   function changeTheme(next: Theme) {
     setTheme(next);
@@ -106,6 +126,34 @@ export function SettingsView({ version, user, onBackupNow, onDisconnect }: Props
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="card settings-card">
+          <h2>Viewing Instagram profiles</h2>
+          <p className="muted settings-lead">
+            Which account to browse from when you preview a profile. Pick one you
+            don't mind being seen as a viewer — it's your session that loads the
+            page, not the account you're looking at. Stored on this PC, so you and
+            Gabriel can each use your own.
+          </p>
+
+          <select
+            className="input"
+            value={viewer}
+            onChange={(e) => chooseViewer(e.target.value)}
+          >
+            <option value="">Not set — preview buttons hidden</option>
+            {viewerOptions.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.username}
+              </option>
+            ))}
+          </select>
+          {viewerOptions.length === 0 && (
+            <span className="form-hint">
+              No Instagram accounts with a usable handle yet.
+            </span>
+          )}
         </section>
 
         <section className="card settings-card">

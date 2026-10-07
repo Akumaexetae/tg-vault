@@ -253,6 +253,51 @@ ipcMain.handle(
   },
 );
 
+/**
+ * Open any URL using ANOTHER account's logged-in session.
+ *
+ * Used to look at a managed account's public profile — reel view counts and
+ * so on — from a viewing account, rather than logging into the managed account
+ * itself. Signing into a warmed account just to read its own numbers is the
+ * risky part, so this avoids it entirely.
+ *
+ * Deliberately does NOT autofill: the viewer is already signed in, and typing
+ * credentials into a page we did not open for a login is how they end up in
+ * the wrong form.
+ */
+ipcMain.handle(
+  'profile:open',
+  async (
+    _event,
+    opts: { viewerId: string; url: string; title: string; proxy: string | null },
+  ) => {
+    if (!/^https?:\/\//i.test(opts.url)) return;
+    const partition = `persist:acct-${opts.viewerId}`;
+
+    if (opts.proxy) {
+      const parsed = parseProxy(opts.proxy);
+      if (parsed) {
+        await session.fromPartition(partition).setProxy({ proxyRules: parsed.rules });
+        if (parsed.username) {
+          proxyCreds.set(`acct-${opts.viewerId}`, {
+            username: parsed.username,
+            password: parsed.password ?? '',
+          });
+        }
+      }
+    }
+
+    const win = new BrowserWindow({
+      width: 1150,
+      height: 820,
+      title: `T&G Vault — viewing ${opts.title}`,
+      autoHideMenuBar: true,
+      webPreferences: { partition, nodeIntegration: false, contextIsolation: true },
+    });
+    win.loadURL(opts.url);
+  },
+);
+
 /** Wipe an account's saved browser session (cookies, storage). */
 ipcMain.handle('login:logout', async (_event, id: string) => {
   await session.fromPartition(`persist:acct-${id}`).clearStorageData();

@@ -829,6 +829,7 @@ function VaultApp({
       <SettingsView
         version={version}
         user={user}
+        entries={data?.entries ?? []}
         onBackupNow={runAutoBackup}
         onDisconnect={onDisconnect}
       />

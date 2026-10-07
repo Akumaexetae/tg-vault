@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld('vaultBridge', {
     totp: string | null;
     proxy: string | null;
   }): Promise<void> => ipcRenderer.invoke('login:open', opts),
+  openProfile: (opts: {
+    viewerId: string;
+    url: string;
+    title: string;
+    proxy: string | null;
+  }): Promise<void> => ipcRenderer.invoke('profile:open', opts),
   logoutAccount: (id: string): Promise<void> =>
     ipcRenderer.invoke('login:logout', id),
   saveBackup: (opts: {
