@@ -31,7 +31,9 @@ describe('instagramHandle', () => {
   it('refuses empty or malformed values', () => {
     expect(instagramHandle('')).toBeNull();
     expect(instagramHandle('   ')).toBeNull();
-    expect(instagramHandle('has spaces')).toBeNull();
+    // 'a b' now yields 'a': a trailing word is treated as a label, which is
+    // what makes "rivera.lo08 FLASH" work. Only a malformed FIRST token fails.
+    expect(instagramHandle('!!! ???')).toBeNull();
     expect(instagramHandle('a'.repeat(31))).toBeNull();
   });
 });
@@ -43,5 +45,23 @@ describe('instagramProfileUrl', () => {
 
   it('is null when there is no usable handle', () => {
     expect(instagramProfileUrl('someone@example.com')).toBeNull();
+  });
+});
+
+describe('usernames carrying a label', () => {
+  it('ignores a trailing tag like FLASH', () => {
+    expect(instagramHandle('rivera.lo08 FLASH')).toBe('rivera.lo08');
+    expect(instagramHandle('quinlolaaa FLASH')).toBe('quinlolaaa');
+    expect(instagramProfileUrl('riva08lola FLASH')).toBe(
+      'https://www.instagram.com/riva08lola/',
+    );
+  });
+
+  it('still rejects a labelled email', () => {
+    expect(instagramHandle('lola@gmail.com FLASH')).toBeNull();
+  });
+
+  it('handles an @ prefix and a label together', () => {
+    expect(instagramHandle('@pradalolaaa FLASH')).toBe('pradalolaaa');
   });
 });

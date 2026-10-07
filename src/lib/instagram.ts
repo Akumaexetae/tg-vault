@@ -28,6 +28,12 @@ export function instagramHandle(username: string): string | null {
 
   if (value.startsWith('@')) value = value.slice(1);
   if (value.includes('@')) return null; // an email, not a handle
+
+  // Usernames often carry a trailing label — "rivera.lo08 FLASH". A real handle
+  // never contains whitespace, so anything after the first gap is annotation,
+  // not part of the name.
+  value = value.split(/\s+/)[0];
+
   return HANDLE.test(value) ? value : null;
 }
 
