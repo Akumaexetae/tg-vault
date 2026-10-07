@@ -7,6 +7,7 @@ import {
 import { loadPreference, savePreference } from '../lib/settings';
 import { applyTheme, loadTheme, watchSystemTheme, type Theme } from '../lib/theme';
 import { isInstagram, instagramHandle } from '../lib/instagram';
+import { DEFAULT_CRM_URL } from '../lib/crm';
 import type { Entry } from '../lib/types';
 
 interface Props {
@@ -40,6 +41,26 @@ export function SettingsView({ version, user, entries, onBackupNow, onDisconnect
   // The viewer's proxy is stored alongside its id so a row can open a window
   // without the entry list being threaded through every view. It is a copy, so
   // changing that account's proxy means re-picking it here.
+  const [crmUrl, setCrmUrl] = useState(() =>
+    loadPreference('crm-url', DEFAULT_CRM_URL),
+  );
+  const [crmState, setCrmState] = useState('');
+
+  async function checkCrm() {
+    setCrmState('Checking…');
+    const result = await window.vaultBridge?.crmAnalytics(crmUrl);
+    if (!result) {
+      setCrmState('Unavailable.');
+      return;
+    }
+    if ('reason' in result) {
+      setCrmState(result.reason);
+      return;
+    }
+    const count = (result.data as { accounts?: unknown[] })?.accounts?.length ?? 0;
+    setCrmState(`Connected — ${count} accounts measured.`);
+  }
+
   function chooseViewer(id: string) {
     setViewer(id);
     const chosen = entries.find((e) => e.id === id);
@@ -154,6 +175,51 @@ export function SettingsView({ version, user, entries, onBackupNow, onDisconnect
               No Instagram accounts with a usable handle yet.
             </span>
           )}
+        </section>
+
+        <section className="card settings-card">
+          <h2>Instagram views from the CRM</h2>
+          <p className="muted settings-lead">
+            View counts are measured by the CRM; the Vault only displays them
+            beside each account. Sign in once here and the session is
+            remembered — your password is never stored in the Vault.
+          </p>
+
+          <label className="form-label">CRM address</label>
+          <input
+            className="input"
+            value={crmUrl}
+            onChange={(e) => {
+              setCrmUrl(e.target.value);
+              savePreference('crm-url', e.target.value);
+            }}
+          />
+
+          <div className="settings-actions">
+            <button
+              className="btn"
+              onClick={() => window.vaultBridge?.crmConnect(crmUrl)}
+            >
+              Sign in to the CRM
+            </button>
+            <button className="btn btn-ghost" onClick={checkCrm}>
+              Check connection
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={async () => {
+                await window.vaultBridge?.crmDisconnect();
+                setCrmState('Signed out on this PC.');
+              }}
+            >
+              Sign out
+            </button>
+          </div>
+          {crmState && <span className="form-hint">{crmState}</span>}
+          <span className="form-hint">
+            Only accounts connected to Bundle have numbers. Anything the CRM has
+            never measured shows a dash.
+          </span>
         </section>
 
         <section className="card settings-card">

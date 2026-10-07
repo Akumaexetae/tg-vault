@@ -704,7 +704,10 @@ h2 {
   /* pin · icon · service+tags · username · password · 2FA · created · actions.
      Every element in the row needs its own track here — an extra child with no
      track lands in an implicit column and pushes the actions onto a second line. */
-  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 78px 210px;
+  /* The actions track must fit its widest row — one labelled button plus four
+     icons — because .entry-actions does not shrink. Too narrow and the delete
+     button spills past the card edge. */
+  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 78px 60px 224px;
 }
 .entry-main-account .entry-actions {
   justify-content: flex-end;
@@ -2885,4 +2888,44 @@ table.canvas-table {
 .filter-note {
   margin: 0 2px 10px;
   font-size: 12px;
+}
+
+/* ---- Instagram view counts (from the CRM) ---------------------------- */
+.entry-views {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.views-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bundle measures nightly, so anything older than two days is suspect.
+   Dimmed rather than hidden: a stale number is still information. */
+.views-stale {
+  color: var(--ink-soft);
+}
+
+.views-label {
+  font-size: 10px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+/* Account profile picture, sized to match the service glyph it replaces so
+   the icon column keeps its track width. */
+.entry-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--surface-2);
 }

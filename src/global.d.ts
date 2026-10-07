@@ -24,6 +24,12 @@ declare global {
         title: string;
         proxy: string | null;
       }) => Promise<void>;
+      crmConnect: (baseUrl: string) => Promise<void>;
+      crmAnalytics: (
+        baseUrl: string,
+      ) => Promise<{ ok: true; data: unknown } | { ok: false; reason: string }>;
+      crmAvatars: (baseUrl: string) => Promise<Record<string, string>>;
+      crmDisconnect: () => Promise<void>;
       logoutAccount: (id: string) => Promise<void>;
       saveBackup: (opts: {
         filename: string;

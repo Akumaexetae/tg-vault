@@ -3,6 +3,7 @@ import { EntryRow } from '../components/EntryRow';
 import { sortByPassword } from '../lib/search';
 import { loadPreference, savePreference } from '../lib/settings';
 import { groupByDay } from '../lib/time';
+import { primaryCount, viewsFor, type AccountViews } from '../lib/crm';
 import type { Creator, Entry, User } from '../lib/types';
 
 /** Whose accounts to show. 'all' is the default and the normal view. */
@@ -23,6 +24,10 @@ interface Props {
   showCreator?: boolean;
   emptyText?: string;
   reusedIds: Set<string>;
+  /** Instagram view counts from the CRM, keyed by lowercased handle. */
+  views?: Map<string, AccountViews>;
+  /** Cached profile pictures as data URLs, keyed by lowercased handle. */
+  avatars?: Record<string, string>;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
   onTogglePin: (entry: Entry) => void;
@@ -40,6 +45,8 @@ export function EntryListView({
   showCreator = true,
   emptyText = 'No accounts here yet.',
   reusedIds,
+  views,
+  avatars,
   onEdit,
   onDelete,
   onTogglePin,
@@ -60,8 +67,30 @@ export function EntryListView({
   // Rows added before migration 012 have no created_by. They stay visible under
   // "All" but cannot be attributed, so a name filter would silently hide them —
   // which on a credential list is worse than showing an extra row.
+  const [byViews, setByViews] = useState(() => loadPreference('sort-by-views', false));
+
+  function toggleByViews() {
+    setByViews((on) => {
+      savePreference('sort-by-views', !on);
+      return !on;
+    });
+  }
+
   const owned = owner === 'all' ? entries : entries.filter((e) => e.created_by === owner);
-  const shown = byPassword ? sortByPassword(owned) : owned;
+  const sorted = byPassword ? sortByPassword(owned) : owned;
+  // Biggest first. Accounts the CRM has no figures for sort last rather than
+  // as zero, so an unconnected account is not mistaken for a dead one.
+  const shown =
+    byViews && views
+      ? [...sorted].sort((a, b) => {
+          const left = primaryCount(viewsFor(a.username, views));
+          const right = primaryCount(viewsFor(b.username, views));
+          if (left === null && right === null) return 0;
+          if (left === null) return 1;
+          if (right === null) return -1;
+          return right - left;
+        })
+      : sorted;
   const unattributed = entries.filter((e) => !e.created_by).length;
 
   function toggleByDate() {
@@ -100,6 +129,16 @@ export function EntryListView({
               onClick={() => setByPassword((on) => !on)}
             >
               {byPassword ? 'Sorted by password ✕' : 'Sort by password'}
+            </button>
+          )}
+          {entries.length > 1 && views && views.size > 0 && (
+            <button
+              className={byViews ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
+              aria-pressed={byViews}
+              title="Sort by Instagram impressions, biggest first"
+              onClick={toggleByViews}
+            >
+              {byViews ? 'Sorted by views ✕' : 'Sort by views'}
             </button>
           )}
           {entries.length > 1 && (
@@ -165,6 +204,8 @@ export function EntryListView({
                       readOnly={readOnly}
                       showCreator={showCreator}
                       reused={reusedIds.has(e.id)}
+                      views={views ? viewsFor(e.username, views) : null}
+                      avatars={avatars}
                       revealAll={revealAll}
                       onEdit={onEdit}
                       onDelete={onDelete}
@@ -181,6 +222,8 @@ export function EntryListView({
                   readOnly={readOnly}
                   showCreator={showCreator}
                   reused={reusedIds.has(e.id)}
+                  views={views ? viewsFor(e.username, views) : null}
+                  avatars={avatars}
                   revealAll={revealAll}
                   onEdit={onEdit}
                   onDelete={onDelete}

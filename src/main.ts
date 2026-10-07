@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import started from 'electron-squirrel-startup';
 import { parseProxy } from './lib/proxy';
 import { clearTokens, loadTokens, refresh, signIn } from './driveAuth';
@@ -297,6 +298,154 @@ ipcMain.handle(
     win.loadURL(opts.url);
   },
 );
+
+/**
+ * The CRM holds the Instagram numbers; the Vault only displays them.
+ *
+ * Authentication is a real logged-in session rather than stored credentials:
+ * the CRM uses cookie sessions with no API-key path, and replaying a password
+ * from the Vault would break the moment it gains 2FA or its auth changes.
+ * Instead the user signs in once in a window on this partition, exactly as
+ * they would in a browser, and the cookie persists for later reads.
+ *
+ * Nothing is written back — these calls are read-only by construction.
+ */
+const CRM_PARTITION = 'persist:crm';
+
+let crmWindow: BrowserWindow | null = null;
+
+ipcMain.handle('crm:connect', (_event, baseUrl: string) => {
+  if (!/^https?:\/\//i.test(baseUrl)) return;
+
+  // One window, reused. Without this a second click opens another behind the
+  // main window, which reads as "the button does nothing".
+  if (crmWindow && !crmWindow.isDestroyed()) {
+    if (crmWindow.isMinimized()) crmWindow.restore();
+    crmWindow.show();
+    crmWindow.focus();
+    return;
+  }
+
+  const win = new BrowserWindow({
+    width: 1150,
+    height: 820,
+    title: 'T&G Vault — sign in to the CRM',
+    autoHideMenuBar: true,
+    webPreferences: {
+      partition: CRM_PARTITION,
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+  });
+  crmWindow = win;
+  win.on('closed', () => {
+    crmWindow = null;
+  });
+  win.loadURL(baseUrl);
+  win.focus();
+});
+
+/**
+ * Returns the analytics payload, or a reason it could not be read. A 401 means
+ * the session lapsed, which is ordinary and should prompt a reconnect rather
+ * than read as a failure.
+ */
+ipcMain.handle(
+  'crm:analytics',
+  async (
+    _event,
+    baseUrl: string,
+  ): Promise<{ ok: true; data: unknown } | { ok: false; reason: string }> => {
+    if (!/^https?:\/\//i.test(baseUrl)) {
+      return { ok: false, reason: 'Set the CRM address first.' };
+    }
+    try {
+      const url = `${baseUrl.replace(/\/+$/, '')}/api/bundle/analytics`;
+      const response = await session.fromPartition(CRM_PARTITION).fetch(url);
+      if (response.status === 401 || response.status === 403) {
+        return { ok: false, reason: 'Not signed in to the CRM.' };
+      }
+      if (!response.ok) {
+        return { ok: false, reason: `CRM returned ${response.status}.` };
+      }
+      // The CRM wraps everything: { ok: true, data: ... }. Its own client
+      // unwraps that, so the payload is a level deeper than the route's
+      // return type suggests.
+      const body = (await response.json()) as
+        | { ok: boolean; data?: unknown; error?: { message?: string } }
+        | Record<string, unknown>;
+      if (body && typeof body === 'object' && 'ok' in body) {
+        const envelope = body as { ok: boolean; data?: unknown; error?: { message?: string } };
+        if (!envelope.ok) {
+          return { ok: false, reason: envelope.error?.message ?? 'The CRM refused the request.' };
+        }
+        return { ok: true, data: envelope.data };
+      }
+      return { ok: true, data: body };
+    } catch {
+      return { ok: false, reason: 'Could not reach the CRM.' };
+    }
+  },
+);
+
+/**
+ * Instagram profile pictures, so 84 identical glyphs become recognisable rows.
+ *
+ * Bundle hands back Meta's signed CDN links, which expire within days. Showing
+ * them directly would mean a list that quietly fills with broken images, so the
+ * bytes are cached on disk the first time they are seen and served from there
+ * afterwards. The cache key is the URL's hash: a new picture means a new URL
+ * means a new file, and the old one simply stops being asked for.
+ */
+const AVATAR_DIR = path.join(app.getPath('userData'), 'avatars');
+
+ipcMain.handle(
+  'crm:avatars',
+  async (_event, baseUrl: string): Promise<Record<string, string>> => {
+    if (!/^https?:\/\//i.test(baseUrl)) return {};
+    const crm = session.fromPartition(CRM_PARTITION);
+    const avatars: Record<string, string> = {};
+
+    try {
+      const response = await crm.fetch(`${baseUrl.replace(/\/+$/, '')}/api/bundle/models`);
+      if (!response.ok) return {};
+      const body = (await response.json()) as { ok?: boolean; data?: unknown };
+      const payload = (body && 'ok' in body ? body.data : body) as {
+        teams?: { platform?: string; account?: { username?: string; avatarUrl?: string | null } }[];
+      };
+
+      fs.mkdirSync(AVATAR_DIR, { recursive: true });
+
+      for (const team of payload?.teams ?? []) {
+        const handle = team.account?.username?.trim().toLowerCase();
+        const url = team.account?.avatarUrl;
+        if (!handle || !url) continue;
+
+        const file = path.join(AVATAR_DIR, crypto.createHash('sha1').update(url).digest('hex'));
+        try {
+          if (!fs.existsSync(file)) {
+            // Plain fetch: a CDN image needs no CRM cookie, and sending one
+            // to a third party would be careless.
+            const image = await fetch(url);
+            if (!image.ok) continue;
+            fs.writeFileSync(file, Buffer.from(await image.arrayBuffer()));
+          }
+          avatars[handle] = `data:image/jpeg;base64,${fs.readFileSync(file).toString('base64')}`;
+        } catch {
+          // One unreachable picture must not cost the other eighty-three.
+        }
+      }
+    } catch {
+      return {};
+    }
+    return avatars;
+  },
+);
+
+/** Sign out of the CRM on this PC. */
+ipcMain.handle('crm:disconnect', async () => {
+  await session.fromPartition(CRM_PARTITION).clearStorageData();
+});
 
 /** Wipe an account's saved browser session (cookies, storage). */
 ipcMain.handle('login:logout', async (_event, id: string) => {

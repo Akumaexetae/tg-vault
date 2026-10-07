@@ -30,6 +30,15 @@ contextBridge.exposeInMainWorld('vaultBridge', {
     title: string;
     proxy: string | null;
   }): Promise<void> => ipcRenderer.invoke('profile:open', opts),
+  crmConnect: (baseUrl: string): Promise<void> =>
+    ipcRenderer.invoke('crm:connect', baseUrl),
+  crmAnalytics: (
+    baseUrl: string,
+  ): Promise<{ ok: true; data: unknown } | { ok: false; reason: string }> =>
+    ipcRenderer.invoke('crm:analytics', baseUrl),
+  crmAvatars: (baseUrl: string): Promise<Record<string, string>> =>
+    ipcRenderer.invoke('crm:avatars', baseUrl),
+  crmDisconnect: (): Promise<void> => ipcRenderer.invoke('crm:disconnect'),
   logoutAccount: (id: string): Promise<void> =>
     ipcRenderer.invoke('login:logout', id),
   saveBackup: (opts: {

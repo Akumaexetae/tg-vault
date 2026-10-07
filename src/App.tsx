@@ -73,6 +73,7 @@ import { ActivityView } from './views/ActivityView';
 import { SettingsView } from './views/SettingsView';
 import { CreatorsView } from './views/CreatorsView';
 import { EntryListView } from './views/EntryListView';
+import { DEFAULT_CRM_URL, indexByHandle, type AccountViews, type CrmAnalytics } from './lib/crm';
 import { HomeView } from './views/HomeView';
 import { ImportModal } from './views/money/ImportModal';
 import { MoneyView } from './views/money/MoneyView';
@@ -212,6 +213,41 @@ function VaultApp({
 
   const readOnly = status !== 'online';
   const groups = useMemo(() => serviceGroups(data?.entries ?? []), [data]);
+
+  /**
+   * Instagram view counts, read from the CRM every half hour.
+   *
+   * Polling is cheap and safe here: the CRM reads its own nightly snapshots,
+   * so this touches no Instagram API and spends no rationed quota. A failure
+   * is silent on purpose — not being signed in to the CRM is a normal state
+   * and must not interrupt a password manager.
+   */
+  const [crmViews, setCrmViews] = useState<Map<string, AccountViews>>(new Map());
+  const [avatars, setAvatars] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refresh() {
+      const url = loadPreference('crm-url', DEFAULT_CRM_URL);
+      if (!url) return;
+      const result = await window.vaultBridge?.crmAnalytics(url);
+      if (cancelled || !result || 'reason' in result) return;
+      setCrmViews(indexByHandle(result.data as CrmAnalytics));
+
+      // Pictures come from a second endpoint and are cached on disk, so a
+      // failure here leaves the numbers intact.
+      const pictures = await window.vaultBridge?.crmAvatars(url);
+      if (!cancelled && pictures) setAvatars(pictures);
+    }
+
+    void refresh();
+    const timer = setInterval(() => void refresh(), 30 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   // Passwords appearing on more than one account — surfaced as a "reused" flag.
   const reusedIds = useMemo(() => {
@@ -580,6 +616,8 @@ function VaultApp({
   if (searching) {
     content = (
       <EntryListView
+        views={crmViews}
+        avatars={avatars}
         title={`Search: “${query.trim()}”`}
         entries={filterEntries(entries, creators, query)}
         creators={creators}
@@ -693,6 +731,8 @@ function VaultApp({
     );
     content = (
       <EntryListView
+        views={crmViews}
+        avatars={avatars}
         title="All accounts"
         entries={filtered}
         creators={creators}
@@ -733,6 +773,8 @@ function VaultApp({
     const list = entries.filter((e) => groupIdOf(e) === route.id);
     content = (
       <EntryListView
+        views={crmViews}
+        avatars={avatars}
         title={
           <span className="title-with-icon">
             <ServiceIcon serviceKey={group?.key ?? 'custom'} serviceUrl={group?.url} size={34} />
@@ -760,6 +802,8 @@ function VaultApp({
     } else if (creatorTab === 'logins') {
       content = (
         <EntryListView
+          views={crmViews}
+          avatars={avatars}
           title={
             <span className="title-with-icon">
               <button className="btn btn-tiny" onClick={() => setCreatorTab('overview')}>
