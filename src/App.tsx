@@ -1084,6 +1084,7 @@ function VaultApp({
       {modal && (
         <EntryModal
           initial={modal.mode === 'edit' ? modal.entry : null}
+          user={user}
           creators={creators}
           defaultServiceKey={modal.mode === 'new' ? modal.serviceKey : undefined}
           defaultCreatorId={modal.mode === 'new' ? modal.creatorId : undefined}

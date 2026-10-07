@@ -138,13 +138,14 @@ export interface Entry {
 }
 
 /** Fields the add/edit form owns. Pin + history are managed separately. */
-// created_by is deliberately omitted: the form must never be able to set it.
-// createEntry stamps it once, and updateEntry spreads this type straight into
-// the UPDATE — so leaving it in would rewrite authorship on every edit, which
-// is the exact failure updated_by already has.
+// created_by IS settable here, unlike updated_by. Whoever types an account in
+// is often not whose account it is — the two founders sit together and enter
+// each other's. The form therefore shows an owner field, defaulting to the
+// logged-in user, and must always send the entry's current value when editing
+// so a save never blanks it.
 export type EntryInput = Omit<
   Entry,
-  'id' | 'created_at' | 'updated_at' | 'updated_by' | 'created_by' | 'pinned' | 'history'
+  'id' | 'created_at' | 'updated_at' | 'updated_by' | 'pinned' | 'history'
 >;
 
 export interface SecureNote {

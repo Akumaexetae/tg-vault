@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { SERVICES, serviceDef } from '../lib/catalog';
-import type { Creator, CustomField, Entry, EntryInput } from '../lib/types';
+import type { Creator, CustomField, Entry, EntryInput, User } from '../lib/types';
 import { CloseIcon } from './icons';
 import { ModalOverlay } from './ModalOverlay';
 import { ServiceIcon } from './ServiceIcon';
 
 interface Props {
   initial: Entry | null; // null = new entry
+  /** Logged-in user — the default owner for a new entry. */
+  user: User;
   creators: Creator[];
   defaultServiceKey?: string;
   defaultCreatorId?: string;
@@ -25,6 +27,7 @@ export function extractSecret(input: string): string {
 
 export function EntryModal({
   initial,
+  user,
   creators,
   defaultServiceKey,
   defaultCreatorId,
@@ -53,6 +56,9 @@ export function EntryModal({
   const [recovery, setRecovery] = useState(initial?.recovery ?? '');
   const [accountCreated, setAccountCreated] = useState(initial?.account_created_at ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
+  // Who the account BELONGS to, which is not always who is typing it in.
+  // Editing keeps the stored value so a save never reassigns by accident.
+  const [owner, setOwner] = useState<User>(initial?.created_by ?? user);
   const [fields, setFields] = useState<CustomField[]>(initial?.custom_fields ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -99,6 +105,7 @@ export function EntryModal({
       recovery: recovery.trim() || null,
       custom_fields: fields.filter((f) => f.key.trim() || f.value.trim()),
       notes: notes.trim() || null,
+      created_by: owner,
     };
     setSaving(true);
     setError('');
@@ -243,7 +250,21 @@ export function EntryModal({
               When the account itself was made — not when you added it here.
             </span>
           </div>
-          <div className="form-col" />
+          <div className="form-col">
+            <label className="form-label">Added for</label>
+            <select
+              className="input"
+              value={owner}
+              onChange={(e) => setOwner(e.target.value as User)}
+            >
+              <option value="Tyler">Tyler</option>
+              <option value="Gabriel">Gabriel</option>
+            </select>
+            <span className="form-hint">
+              Whose account this is. Change it when you're entering one on the
+              other's behalf.
+            </span>
+          </div>
         </div>
 
         <label className="form-label">Recovery info (optional)</label>
