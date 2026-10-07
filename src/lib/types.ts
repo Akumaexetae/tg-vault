@@ -128,13 +128,23 @@ export interface Entry {
   history: PasswordChange[];
   created_at: string;
   updated_at: string;
+  /**
+   * Who added this entry. Set once on insert and never rewritten, unlike
+   * updated_by — which becomes whoever last edited, so it cannot answer
+   * "whose account is this". Null only for rows predating migration 012.
+   */
+  created_by: User | null;
   updated_by: User;
 }
 
 /** Fields the add/edit form owns. Pin + history are managed separately. */
+// created_by is deliberately omitted: the form must never be able to set it.
+// createEntry stamps it once, and updateEntry spreads this type straight into
+// the UPDATE — so leaving it in would rewrite authorship on every edit, which
+// is the exact failure updated_by already has.
 export type EntryInput = Omit<
   Entry,
-  'id' | 'created_at' | 'updated_at' | 'updated_by' | 'pinned' | 'history'
+  'id' | 'created_at' | 'updated_at' | 'updated_by' | 'created_by' | 'pinned' | 'history'
 >;
 
 export interface SecureNote {

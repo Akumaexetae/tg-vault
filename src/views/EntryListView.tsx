@@ -3,7 +3,16 @@ import { EntryRow } from '../components/EntryRow';
 import { sortByPassword } from '../lib/search';
 import { loadPreference, savePreference } from '../lib/settings';
 import { groupByDay } from '../lib/time';
-import type { Creator, Entry } from '../lib/types';
+import type { Creator, Entry, User } from '../lib/types';
+
+/** Whose accounts to show. 'all' is the default and the normal view. */
+type Owner = 'all' | User;
+
+const OWNERS: [Owner, string][] = [
+  ['all', 'All'],
+  ['Tyler', 'Tyler'],
+  ['Gabriel', 'Gabriel'],
+];
 
 interface Props {
   title: ReactNode;
@@ -41,7 +50,19 @@ export function EntryListView({
   const [revealAll, setRevealAll] = useState(false);
   // Remembered per machine: whoever groups by date tends to want it every time.
   const [byDate, setByDate] = useState(() => loadPreference('group-by-date', false));
-  const shown = byPassword ? sortByPassword(entries) : entries;
+  const [owner, setOwner] = useState<Owner>(() => loadPreference<Owner>('owner-filter', 'all'));
+
+  function chooseOwner(next: Owner) {
+    setOwner(next);
+    savePreference('owner-filter', next);
+  }
+
+  // Rows added before migration 012 have no created_by. They stay visible under
+  // "All" but cannot be attributed, so a name filter would silently hide them —
+  // which on a credential list is worse than showing an extra row.
+  const owned = owner === 'all' ? entries : entries.filter((e) => e.created_by === owner);
+  const shown = byPassword ? sortByPassword(owned) : owned;
+  const unattributed = entries.filter((e) => !e.created_by).length;
 
   function toggleByDate() {
     setByDate((on) => {
@@ -82,6 +103,20 @@ export function EntryListView({
             </button>
           )}
           {entries.length > 1 && (
+            <div className="owner-filter" role="group" aria-label="Whose accounts">
+              {OWNERS.map(([value, label]) => (
+                <button
+                  key={value}
+                  className={owner === value ? 'owner-btn owner-btn-on' : 'owner-btn'}
+                  aria-pressed={owner === value}
+                  onClick={() => chooseOwner(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {entries.length > 1 && (
             <button
               className={byDate ? 'btn btn-toggle is-on' : 'btn btn-toggle'}
               aria-pressed={byDate}
@@ -97,9 +132,19 @@ export function EntryListView({
         </div>
       </div>
       {headerExtra}
+      {owner !== 'all' && unattributed > 0 && (
+        <p className="muted filter-note">
+          {unattributed} older {unattributed === 1 ? 'account has' : 'accounts have'} no
+          recorded owner and {unattributed === 1 ? 'is' : 'are'} hidden by this filter.
+        </p>
+      )}
       {entries.length === 0 ? (
         <div className="empty-state card">
           <p>{emptyText}</p>
+        </div>
+      ) : shown.length === 0 ? (
+        <div className="empty-state card">
+          <p>No accounts added by {owner}.</p>
         </div>
       ) : (
         <div className="entry-list">

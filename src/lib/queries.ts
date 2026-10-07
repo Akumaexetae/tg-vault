@@ -94,7 +94,7 @@ export async function createEntry(
 ): Promise<void> {
   const { error } = await getClient()
     .from('entries')
-    .insert({ ...input, updated_by: who });
+    .insert({ ...input, created_by: who, updated_by: who });
   if (error) throw asError(error);
   await logActivity(who, 'created', label);
 }

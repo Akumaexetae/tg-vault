@@ -26,6 +26,7 @@ const entry = (over: Partial<Entry>): Entry => ({
   history: [],
   created_at: '2026-07-26T00:00:00Z',
   updated_at: '2026-07-26T00:00:00Z',
+  created_by: 'Tyler',
   updated_by: 'Tyler',
   ...over,
 });

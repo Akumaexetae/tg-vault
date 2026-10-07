@@ -2841,3 +2841,48 @@ table.canvas-table {
   color: var(--ink-soft);
   white-space: nowrap;
 }
+
+/* ---- Owner filter (All / Tyler / Gabriel) ---------------------------- */
+.owner-filter {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.owner-btn {
+  padding: 7px 14px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.owner-btn:last-child {
+  border-right: 0;
+}
+
+.owner-btn:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.owner-btn-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.owner-btn-on:hover {
+  background: var(--accent-dark);
+  color: var(--on-accent);
+}
+
+.filter-note {
+  margin: 0 2px 10px;
+  font-size: 12px;
+}
