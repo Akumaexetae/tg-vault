@@ -242,6 +242,9 @@ function VaultApp({
     }
 
     void refresh();
+    // Refetch as soon as the CRM sign-in window closes, rather than making
+    // someone restart the app because they signed in a minute too late.
+    window.vaultBridge?.onCrmChanged(() => void refresh());
     const timer = setInterval(() => void refresh(), 30 * 60 * 1000);
     return () => {
       cancelled = true;

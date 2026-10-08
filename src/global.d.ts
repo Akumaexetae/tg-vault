@@ -38,6 +38,7 @@ declare global {
       appVersion: () => Promise<string>;
       updateStatus: () => Promise<boolean>;
       restartForUpdate: () => Promise<void>;
+      onCrmChanged: (callback: () => void) => void;
       onUpdateReady: (callback: () => void) => void;
       driveStatus: () => Promise<{ configured: boolean; signedIn: boolean }>;
       driveSetClientId: (clientId: string, clientSecret: string) => Promise<void>;

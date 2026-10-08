@@ -48,6 +48,9 @@ contextBridge.exposeInMainWorld('vaultBridge', {
   appVersion: (): Promise<string> => ipcRenderer.invoke('app:version'),
   updateStatus: (): Promise<boolean> => ipcRenderer.invoke('update:status'),
   restartForUpdate: (): Promise<void> => ipcRenderer.invoke('update:restart'),
+  onCrmChanged: (callback: () => void): void => {
+    ipcRenderer.on('crm:changed', callback);
+  },
   onUpdateReady: (callback: () => void): void => {
     ipcRenderer.on('update:ready', callback);
   },

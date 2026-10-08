@@ -340,6 +340,12 @@ ipcMain.handle('crm:connect', (_event, baseUrl: string) => {
   crmWindow = win;
   win.on('closed', () => {
     crmWindow = null;
+    // Signing in is the moment the numbers become fetchable. Without this the
+    // renderer keeps whatever it got at startup — which, for anyone who signs
+    // in after opening the Vault, is nothing until the next half-hourly tick.
+    for (const open of BrowserWindow.getAllWindows()) {
+      open.webContents.send('crm:changed');
+    }
   });
   win.loadURL(baseUrl);
   win.focus();
