@@ -2929,3 +2929,56 @@ table.canvas-table {
   display: block;
   background: var(--surface-2);
 }
+
+/* ---- Hand-set tags --------------------------------------------------- */
+/* Distinct from the derived health pills: those warn, these describe. */
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border: 1px solid var(--border);
+}
+
+.tag-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.tag-editor:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.tag-input {
+  flex: 1;
+  min-width: 120px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  padding: 2px 0;
+}
+
+.pill-remove {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  opacity: 0.6;
+}
+
+.pill-remove:hover {
+  opacity: 1;
+}

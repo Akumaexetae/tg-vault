@@ -190,6 +190,11 @@ export function EntryRow({
                 {creator.name}
               </span>
             )}
+            {(entry.tags ?? []).map((tag) => (
+              <span key={tag} className="pill pill-tag">
+                {tag}
+              </span>
+            ))}
             {flags.map((f) => (
               <span key={f.key} className={`pill pill-${f.key}`}>
                 {f.label}

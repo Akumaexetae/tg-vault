@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SERVICES, serviceDef } from '../lib/catalog';
 import type { Creator, CustomField, Entry, EntryInput, User } from '../lib/types';
+import { normalizeTag, normalizeTags, parseTags } from '../lib/tags';
 import { CloseIcon } from './icons';
 import { ModalOverlay } from './ModalOverlay';
 import { ServiceIcon } from './ServiceIcon';
@@ -59,6 +60,14 @@ export function EntryModal({
   // Who the account BELONGS to, which is not always who is typing it in.
   // Editing keeps the stored value so a save never reassigns by accident.
   const [owner, setOwner] = useState<User>(initial?.created_by ?? user);
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [tagDraft, setTagDraft] = useState('');
+
+  function commitTags(text: string) {
+    const added = parseTags(text);
+    if (added.length) setTags((current) => normalizeTags([...current, ...added]));
+    setTagDraft('');
+  }
   const [fields, setFields] = useState<CustomField[]>(initial?.custom_fields ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -106,6 +115,9 @@ export function EntryModal({
       custom_fields: fields.filter((f) => f.key.trim() || f.value.trim()),
       notes: notes.trim() || null,
       created_by: owner,
+      // Fold in whatever is still sitting in the box: forgetting to press
+      // Enter should not silently drop the tag you just typed.
+      tags: normalizeTags([...tags, ...parseTags(tagDraft)]),
     };
     setSaving(true);
     setError('');
@@ -266,6 +278,47 @@ export function EntryModal({
             </span>
           </div>
         </div>
+
+        <label className="form-label">Tags (optional)</label>
+        <div className="tag-editor">
+          {tags.map((tag) => (
+            <span key={tag} className="pill pill-tag">
+              {tag}
+              <button
+                type="button"
+                className="pill-remove"
+                title={`Remove ${tag}`}
+                onClick={() => setTags((current) => current.filter((t) => t !== tag))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <input
+            className="tag-input"
+            value={tagDraft}
+            placeholder={tags.length ? 'Add another…' : 'USA, warmed…'}
+            maxLength={60}
+            onChange={(e) => {
+              // A comma means they finished a tag, so take it straight away.
+              if (e.target.value.includes(',')) commitTags(e.target.value);
+              else setTagDraft(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitTags(tagDraft);
+              } else if (e.key === 'Backspace' && !tagDraft && tags.length) {
+                setTags((current) => current.slice(0, -1));
+              }
+            }}
+            onBlur={() => commitTags(tagDraft)}
+          />
+        </div>
+        <span className="form-hint">
+          Enter or a comma adds one. Anything you like — country, state of the
+          account, whatever you need to find it by later.
+        </span>
 
         <label className="form-label">Recovery info (optional)</label>
         <textarea

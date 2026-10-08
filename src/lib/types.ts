@@ -124,6 +124,11 @@ export interface Entry {
    * Account age is what matters for warmed socials.
    */
   account_created_at: string | null;
+  /**
+   * Free-form labels set by hand, e.g. 'USA'. Unlike the weak/reused/old
+   * pills, which are computed, these say what the data cannot work out.
+   */
+  tags: string[];
   pinned: boolean;
   history: PasswordChange[];
   created_at: string;

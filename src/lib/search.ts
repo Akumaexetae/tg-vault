@@ -8,8 +8,15 @@ export function matchesQuery(
 ): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [entry.service_name, creatorName, entry.username, entry.notes ?? '']
-    .some((field) => field.toLowerCase().includes(q));
+  // Tags are included so a label is a way to FIND accounts, not just to look
+  // at — typing "USA" should bring back the accounts marked USA.
+  return [
+    entry.service_name,
+    creatorName,
+    entry.username,
+    entry.notes ?? '',
+    ...(entry.tags ?? []),
+  ].some((field) => field.toLowerCase().includes(q));
 }
 
 export function filterEntries(
