@@ -97,3 +97,8 @@ out/
 # Vault exports — plaintext passwords. This repo is public.
 TGvault-Backups/
 tg-vault-*.json
+
+# One-off scripts run against the CRM/Bundle during debugging.
+*.tmp.js
+*.tmp.cjs
+*.tmp.mjs
