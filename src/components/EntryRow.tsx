@@ -3,8 +3,9 @@ import { useTotp } from '../hooks/useTotp';
 import { isOld, isWeak } from '../lib/health';
 import { instagramHandle, instagramProfileUrl, isInstagram } from '../lib/instagram';
 import { compactViews, isStale, primaryCount, type AccountViews } from '../lib/crm';
+import { axisLabel, chartGeometry, formatGain, sparkPoints, type AccountTrend, type ChartPoint } from '../lib/metrics';
 import { loadPreference } from '../lib/settings';
-import { accountAge, accountDate, timeAgo } from '../lib/time';
+import { timeAgo } from '../lib/time';
 import { totpCode } from '../lib/totp';
 import type { Creator, Entry } from '../lib/types';
 import { ServiceIcon } from './ServiceIcon';
@@ -20,6 +21,8 @@ interface Props {
   views?: AccountViews | null;
   /** Cached profile pictures as data URLs, keyed by lowercased handle. */
   avatars?: Record<string, string>;
+  /** Recorded daily history for this account, null when none exists yet. */
+  trend?: AccountTrend | null;
   /** List-wide "show all passwords"; a row can still be toggled on its own after. */
   revealAll?: boolean;
   onEdit: (entry: Entry) => void;
@@ -91,6 +94,7 @@ export function EntryRow({
   reused = false,
   views = null,
   avatars,
+  trend = null,
   revealAll = false,
   onEdit,
   onDelete,
@@ -104,6 +108,7 @@ export function EntryRow({
     setRevealed(revealAll);
   }
   const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState<ChartPoint | null>(null);
   const toast = useToast();
   const creator = creators.find((c) => c.id === entry.creator_id);
   const history = entry.history ?? [];
@@ -224,24 +229,6 @@ export function EntryRow({
         </div>
 
         <div
-          className="entry-created"
-          title={
-            entry.account_created_at
-              ? `Account created ${entry.account_created_at}`
-              : 'Account creation date not recorded'
-          }
-        >
-          {entry.account_created_at ? (
-            <>
-              <span className="created-date">{accountDate(entry.account_created_at)}</span>
-              <span className="created-age">{accountAge(entry.account_created_at)}</span>
-            </>
-          ) : (
-            <span className="created-empty">—</span>
-          )}
-        </div>
-
-        <div
           className="entry-views"
           title={
             views
@@ -255,12 +242,27 @@ export function EntryRow({
               : 'No figures — this account is not connected to the CRM'
           }
         >
-          {views ? (
+          {views || trend ? (
             <>
-              <span className={`views-count ${isStale(views.measuredAt) ? 'views-stale' : ''}`}>
-                {compactViews(primaryCount(views))}
+              {/* The recorded line, where there is one. Two readings minimum:
+                  a single dot says nothing about a trend. */}
+              {trend && sparkPoints(trend.points) ? (
+                <svg className="views-spark" viewBox="0 0 64 20" width="64" height="20" aria-hidden="true">
+                  <polyline points={sparkPoints(trend.points)} />
+                </svg>
+              ) : null}
+              <span className="views-figures">
+                <span className={`views-count ${views && isStale(views.measuredAt) ? 'views-stale' : ''}`}>
+                  {compactViews(trend?.total ?? primaryCount(views))}
+                </span>
+                {trend?.gain !== null && trend?.gain !== undefined ? (
+                  <span className={`views-gain ${trend.gain > 0 ? 'views-gain-up' : ''}`}>
+                    {formatGain(trend.gain)}
+                  </span>
+                ) : (
+                  <span className="views-label">views</span>
+                )}
               </span>
-              <span className="views-label">views</span>
             </>
           ) : (
             <span className="created-empty">—</span>
@@ -354,6 +356,109 @@ export function EntryRow({
 
       {expanded && (
         <div className="entry-details">
+          {trend && trend.points.length > 1 && (() => {
+            const g = chartGeometry(trend.points);
+            if (!g) return null;
+            const best = g.points.reduce((a, b) => ((b.gain ?? -1) > (a.gain ?? -1) ? b : a), g.points[0]);
+            const mid = (g.min + g.max) / 2;
+
+            return (
+              <div className="trend-panel">
+                <div className="trend-head">
+                  <span className="detail-label">Views</span>
+                  <span className="trend-summary">
+                    <strong>{(trend.total ?? 0).toLocaleString('en-GB')}</strong> total
+                    {trend.gain !== null && <> · {formatGain(trend.gain)} yesterday</>}
+                    {best.gain ? <> · best day {formatGain(best.gain)}</> : null}
+                  </span>
+                </div>
+
+                <div className="trend-chart">
+                  <div className="trend-scale">
+                    <span>{axisLabel(g.max)}</span>
+                    <span>{axisLabel(mid)}</span>
+                    <span>{axisLabel(g.min)}</span>
+                  </div>
+
+                  <div className="trend-plot">
+                    {/* Stretched to the panel's width with a non-scaling stroke,
+                        so the line stays an even weight at any size. */}
+                    <svg
+                      className="trend-svg"
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      aria-label="Total views over time"
+                    >
+                      <line className="trend-grid" x1="0" y1="50" x2="100" y2="50" vectorEffect="non-scaling-stroke" />
+                      <polygon className="trend-area" points={g.area} />
+                      <polyline className="trend-line" points={g.line} vectorEffect="non-scaling-stroke" />
+                    </svg>
+
+                    {/* Dots sit outside the stretched SVG: inside it they would
+                        be squashed into ellipses by the same scaling. */}
+                    {g.points.map((p) => (
+                      <span
+                        key={p.day}
+                        className={`trend-dot ${hovered?.day === p.day ? 'trend-dot-on' : ''}`}
+                        style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                        onMouseEnter={() => setHovered(p)}
+                        onMouseLeave={() => setHovered(null)}
+                      />
+                    ))}
+
+                    {/* Anchored to the hovered reading, and tucked in near an
+                        edge so it never hangs outside the panel. */}
+                    {hovered && (
+                      <div
+                        className="trend-tip"
+                        style={{
+                          left: `${hovered.x}%`,
+                          top: `${hovered.y}%`,
+                          transform: `translate(${
+                            hovered.x > 78 ? '-100%' : hovered.x < 22 ? '0%' : '-50%'
+                          }, calc(-100% - 12px))`,
+                        }}
+                      >
+                        <div className="trend-tip-day">
+                          {new Date(`${hovered.day}T00:00:00`).toLocaleDateString('en-GB', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </div>
+                        <div className="trend-tip-row">
+                          <span className="trend-tip-value">
+                            {hovered.total.toLocaleString('en-GB')}
+                          </span>
+                          <span className="trend-tip-unit">views</span>
+                          {hovered.gain !== null && (
+                            <span className={`trend-tip-gain ${hovered.gain > 0 ? 'views-gain-up' : ''}`}>
+                              {formatGain(hovered.gain)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="trend-tip-row">
+                          <span className="trend-tip-value">
+                            {hovered.followers === null ? '—' : hovered.followers.toLocaleString('en-GB')}
+                          </span>
+                          <span className="trend-tip-unit">
+                            {hovered.followers === null ? 'followers not recorded' : 'followers'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="trend-foot">
+                  <span>{g.points[0].day}</span>
+                  <span>{trend.points.length} days recorded</span>
+                  <span>{g.points[g.points.length - 1].day}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           {entry.proxy && (
             <div className="detail-block">
               <span className="detail-label">Proxy</span>

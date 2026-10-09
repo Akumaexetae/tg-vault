@@ -457,3 +457,75 @@ comment on column entries.tags is
   'Free-form labels set by hand, e.g. USA. Distinct from the derived health pills.';
 
 notify pgrst, 'reload schema';
+-- Migration 014 — a nightly record of each Instagram account's numbers.
+--
+-- Bundle snapshots nightly but only keeps a limited window, and the CRM stores
+-- nothing at all: its analytics screen reads Bundle live each time. So any
+-- history older than Bundle's window is lost permanently unless we write it
+-- down as it happens. This table is that record.
+--
+-- Keyed on (handle, day) so the recorder can be re-run, or run twice, without
+-- doubling a day. Handles are stored lowercase: Instagram treats them as
+-- case-insensitive and the vault stores whatever was typed.
+--
+-- Impressions is the number the operators call "views" — reel plays. On these
+-- accounts it climbs, so a day's gain is this row minus the day before.
+
+create table if not exists account_metrics (
+  handle      text   not null,
+  day         date   not null,
+  impressions bigint,
+  views       bigint,
+  followers   integer,
+  posts       integer,
+  recorded_at timestamptz not null default now(),
+  primary key (handle, day)
+);
+
+create index if not exists account_metrics_day_idx on account_metrics (day desc);
+
+comment on table account_metrics is
+  'One row per Instagram account per day, written by the nightly recorder on the VPS. The only long-term history of these numbers that exists.';
+comment on column account_metrics.impressions is
+  'Reel views. Climbs, so day-on-day difference is views gained.';
+
+notify pgrst, 'reload schema';
+
+-- Supabase turns row-level security ON for new tables, and the vault runs with
+-- it off everywhere else (see creators, entries, secure_notes above): there is
+-- no auth layer, and the publishable key is the credential. Without this the
+-- recorder's writes are refused with a policy violation.
+alter table account_metrics disable row level security;
+
+notify pgrst, 'reload schema';
+-- Migration 015 — the recent metrics series, one row per account.
+--
+-- Reading account_metrics directly would be 111 accounts x 30 days = 3 330
+-- rows, and Supabase caps an unbounded select at 1 000: the Vault would get a
+-- silently truncated answer and draw graphs for a third of the roster. This
+-- collapses the series into one row per handle, so the payload is small and
+-- the cap is never in play.
+--
+-- `stable` rather than `volatile`: it only reads, so PostgREST may cache it
+-- within a request.
+
+create or replace function account_metrics_recent(days integer default 30)
+returns table (handle text, series jsonb)
+language sql
+stable
+as $$
+  select
+    m.handle,
+    jsonb_agg(
+      jsonb_build_object('d', m.day, 'i', m.impressions, 'f', m.followers)
+      order by m.day
+    ) as series
+  from account_metrics m
+  where m.day >= current_date - days
+  group by m.handle
+$$;
+
+comment on function account_metrics_recent is
+  'Per-account daily series for the Vault sparklines. Grouped so the response stays under the row cap.';
+
+notify pgrst, 'reload schema';

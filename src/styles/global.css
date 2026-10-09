@@ -707,7 +707,12 @@ h2 {
   /* The actions track must fit its widest row — one labelled button plus four
      icons — because .entry-actions does not shrink. Too narrow and the delete
      button spills past the card edge. */
-  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 78px 60px 224px;
+  /* pin · icon · service+tags · username · password · 2FA · views · actions.
+     The account-creation column was dropped in 1.0.28: the date lives on the
+     edit form, and its 78px went to the views cell, which now carries a
+     sparkline as well as a number. Every direct child still needs its own
+     track here, or it lands in an implicit column and wraps the actions. */
+  grid-template-columns: 20px 28px 150px minmax(0, 1.4fr) minmax(0, 1fr) 110px 138px 224px;
 }
 .entry-main-account .entry-actions {
   justify-content: flex-end;
@@ -2891,15 +2896,6 @@ table.canvas-table {
 }
 
 /* ---- Instagram view counts (from the CRM) ---------------------------- */
-.entry-views {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  line-height: 1.15;
-  min-width: 0;
-}
-
 .views-count {
   font-size: 13px;
   font-weight: 600;
@@ -2981,4 +2977,224 @@ table.canvas-table {
 
 .pill-remove:hover {
   opacity: 1;
+}
+
+/* ---- Views cell: recorded total, day's gain, 30-day line ------------- */
+.entry-views {
+  display: flex;
+  /* Stated explicitly: an earlier version of this rule set `column`, and
+     because that block came first and this one did not override the property,
+     the line and the figures stacked instead of sitting side by side. */
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.views-spark {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.views-spark polyline {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.views-figures {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+  /* FIXED width, not content width. Sized by content, "47k / +11,601" is far
+     wider than "931 / +479", and the sparkline before it slides left and right
+     down the list. A fixed box keeps every line starting at the same x. */
+  flex: 0 0 62px;
+  min-width: 0;
+}
+
+/* The day's gain. Green only when something actually moved — colouring a
+   +3 the same as a +2,000 trains you to stop reading it. */
+.views-gain {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.views-gain-up {
+  color: var(--pill-good-fg);
+}
+
+/* ---- Expanded panel: a bar per day ----------------------------------- */
+/* The expanded account chart. A panel of its own rather than a row in the
+   70px-label layout the other details use — a chart needs the width. */
+.trend-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.trend-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.trend-summary {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-summary strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trend-chart {
+  display: flex;
+  gap: 12px;
+  height: 190px;
+}
+
+/* Top, middle and bottom of the range, so the shape carries a scale. */
+.trend-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 46px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 10px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-plot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.trend-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.trend-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.trend-area {
+  fill: var(--accent);
+  opacity: 0.12;
+}
+
+.trend-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+/* Outside the SVG: inside, the same stretching that fits the line to the
+   panel would squash a circle into an ellipse. */
+.trend-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface-2);
+}
+
+.trend-dot:hover,
+.trend-dot-on {
+  width: 9px;
+  height: 9px;
+  margin: -5px 0 0 -5px;
+  background: var(--on-accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* The reading under the cursor. Anchored to its dot and lifted clear of it,
+   so the card never sits under the pointer and flickers. */
+.trend-tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  min-width: 132px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  white-space: nowrap;
+}
+
+.trend-tip-day {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+
+.trend-tip-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  line-height: 1.5;
+}
+
+.trend-tip-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-tip-unit {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+.trend-tip-gain {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--ink-soft);
+  padding-left: 58px;
+}
+
+/* A night nothing was recorded. A stub, deliberately not a zero-height bar:
+   "not measured" and "no views" are different facts. */
+.trend-bar-missing {
+  background: var(--border-strong);
 }

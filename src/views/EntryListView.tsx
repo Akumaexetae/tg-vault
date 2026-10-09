@@ -4,6 +4,7 @@ import { sortByPassword } from '../lib/search';
 import { loadPreference, savePreference } from '../lib/settings';
 import { groupByDay } from '../lib/time';
 import { primaryCount, viewsFor, type AccountViews } from '../lib/crm';
+import { trendFor, type MetricPoint } from '../lib/metrics';
 import type { Creator, Entry, User } from '../lib/types';
 
 /** Whose accounts to show. 'all' is the default and the normal view. */
@@ -28,6 +29,8 @@ interface Props {
   views?: Map<string, AccountViews>;
   /** Cached profile pictures as data URLs, keyed by lowercased handle. */
   avatars?: Record<string, string>;
+  /** Recorded daily history, keyed by lowercased handle. */
+  trends?: Map<string, MetricPoint[]>;
   onEdit: (entry: Entry) => void;
   onDelete: (entry: Entry) => void;
   onTogglePin: (entry: Entry) => void;
@@ -47,6 +50,7 @@ export function EntryListView({
   reusedIds,
   views,
   avatars,
+  trends,
   onEdit,
   onDelete,
   onTogglePin,
@@ -206,6 +210,7 @@ export function EntryListView({
                       reused={reusedIds.has(e.id)}
                       views={views ? viewsFor(e.username, views) : null}
                       avatars={avatars}
+                      trend={trends ? trendFor(e.username, trends) : null}
                       revealAll={revealAll}
                       onEdit={onEdit}
                       onDelete={onDelete}
@@ -224,6 +229,7 @@ export function EntryListView({
                   reused={reusedIds.has(e.id)}
                   views={views ? viewsFor(e.username, views) : null}
                   avatars={avatars}
+                  trend={trends ? trendFor(e.username, trends) : null}
                   revealAll={revealAll}
                   onEdit={onEdit}
                   onDelete={onDelete}

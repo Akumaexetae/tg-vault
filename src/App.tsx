@@ -74,6 +74,8 @@ import { SettingsView } from './views/SettingsView';
 import { CreatorsView } from './views/CreatorsView';
 import { EntryListView } from './views/EntryListView';
 import { DEFAULT_CRM_URL, indexByHandle, type AccountViews, type CrmAnalytics } from './lib/crm';
+import { indexSeries, type MetricPoint } from './lib/metrics';
+import { fetchMetrics } from './lib/queries';
 import { HomeView } from './views/HomeView';
 import { ImportModal } from './views/money/ImportModal';
 import { MoneyView } from './views/money/MoneyView';
@@ -224,6 +226,19 @@ function VaultApp({
    */
   const [crmViews, setCrmViews] = useState<Map<string, AccountViews>>(new Map());
   const [avatars, setAvatars] = useState<Record<string, string>>({});
+  const [trends, setTrends] = useState<Map<string, MetricPoint[]>>(new Map());
+
+  // Recorded history lives in Supabase and is written nightly, so it needs no
+  // CRM session and reloading it often would be pointless.
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMetrics(30).then((rows) => {
+      if (!cancelled) setTrends(indexSeries(rows));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -621,6 +636,7 @@ function VaultApp({
       <EntryListView
         views={crmViews}
         avatars={avatars}
+        trends={trends}
         title={`Search: “${query.trim()}”`}
         entries={filterEntries(entries, creators, query)}
         creators={creators}
@@ -736,6 +752,7 @@ function VaultApp({
       <EntryListView
         views={crmViews}
         avatars={avatars}
+        trends={trends}
         title="All accounts"
         entries={filtered}
         creators={creators}
@@ -778,6 +795,7 @@ function VaultApp({
       <EntryListView
         views={crmViews}
         avatars={avatars}
+        trends={trends}
         title={
           <span className="title-with-icon">
             <ServiceIcon serviceKey={group?.key ?? 'custom'} serviceUrl={group?.url} size={34} />
@@ -807,6 +825,7 @@ function VaultApp({
         <EntryListView
           views={crmViews}
           avatars={avatars}
+          trends={trends}
           title={
             <span className="title-with-icon">
               <button className="btn btn-tiny" onClick={() => setCreatorTab('overview')}>

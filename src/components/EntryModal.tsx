@@ -21,9 +21,20 @@ interface Props {
 /** Accepts a raw base32 secret or a full otpauth:// URI copied from a QR code. */
 export function extractSecret(input: string): string {
   const value = input.trim();
-  if (!/^otpauth:\/\//i.test(value)) return value;
-  const match = /[?&]secret=([^&]+)/i.exec(value);
-  return match ? decodeURIComponent(match[1]) : value;
+  if (/^otpauth:\/\//i.test(value)) {
+    const match = /[?&]secret=([^&]+)/i.exec(value);
+    // A link with no secret in it is not a secret. Hand it back untouched so
+    // the paste stays recognisable and can be corrected.
+    if (!match) return value;
+    return decodeURIComponent(match[1]).replace(/[\s-]/g, '').toUpperCase();
+  }
+  const secret = value;
+
+  // Instagram and Google present the seed in groups of four — "ZAHE CJ7E …".
+  // totpCode already tolerates that when generating, but storing it verbatim
+  // leaves the vault holding a value that only works because something later
+  // cleans it. Canonical base32 goes in: no spaces or dashes, uppercase.
+  return secret.replace(/[\s-]/g, '').toUpperCase();
 }
 
 export function EntryModal({

@@ -1,5 +1,6 @@
 import { changedFieldNames } from './creators/activity';
 import { getClient } from './supabase';
+import type { MetricSeries } from './metrics';
 import type {
   Activity,
   Creator,
@@ -40,6 +41,27 @@ function asError(error: {
     );
   }
   return new Error(error.hint ? `${error.message} (${error.hint})` : error.message);
+}
+
+/**
+ * Daily history for the account sparklines.
+ *
+ * Deliberately NOT part of fetchAll: that throws on any failure and the caller
+ * turns the whole vault "offline". Missing graphs are a cosmetic loss and must
+ * never cost you the credentials, so this returns an empty list instead.
+ *
+ * Goes through the account_metrics_recent function rather than the table —
+ * 111 accounts over 30 days exceeds Supabase's default row cap, and a
+ * truncated answer would draw graphs for only part of the roster.
+ */
+export async function fetchMetrics(days = 30): Promise<MetricSeries[]> {
+  try {
+    const { data, error } = await getClient().rpc('account_metrics_recent', { days });
+    if (error) return [];
+    return (data ?? []) as MetricSeries[];
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchAll(): Promise<VaultData> {
