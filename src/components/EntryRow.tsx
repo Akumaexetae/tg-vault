@@ -112,9 +112,13 @@ export function EntryRow({
   const toast = useToast();
   const creator = creators.find((c) => c.id === entry.creator_id);
   const history = entry.history ?? [];
+  // A recorded chart is a reason to expand in its own right. Without this the
+  // chevron only appeared on rows that happened to carry recovery info or a
+  // proxy, so most accounts had a chart with no way to open it.
+  const hasChart = !!trend && trend.points.length > 1;
   const hasDetails =
     !!entry.recovery || entry.custom_fields.length > 0 || !!entry.notes ||
-    !!entry.proxy || history.length > 0;
+    !!entry.proxy || history.length > 0 || hasChart;
 
   const flags = [
     isWeak(entry.password) && { key: 'weak', label: 'weak' },
